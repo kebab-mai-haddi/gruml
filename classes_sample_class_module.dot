@@ -1,0 +1,24 @@
+digraph "classes_sample_class_module" {
+charset="utf-8"
+rankdir=BT
+"0" [label="{A|i : int\l|f()\l}", shape="record"];
+"1" [label="{ABC|\l|}", shape="record"];
+"2" [label="{B|i : int\l|g()\l}", shape="record"];
+"3" [label="{C|\l|}", shape="record"];
+"4" [label="{D|\l|}", shape="record"];
+"5" [label="{DEF|\l|}", shape="record"];
+"6" [label="{E|\l|}", shape="record"];
+"7" [label="{F|\l|}", shape="record"];
+"8" [label="{G|\l|}", shape="record"];
+"2" -> "0" [arrowhead="empty", arrowtail="none"];
+"3" -> "2" [arrowhead="empty", arrowtail="none"];
+"4" -> "0" [arrowhead="empty", arrowtail="none"];
+"5" -> "1" [arrowhead="empty", arrowtail="none"];
+"6" -> "3" [arrowhead="empty", arrowtail="none"];
+"6" -> "4" [arrowhead="empty", arrowtail="none"];
+"7" -> "1" [arrowhead="empty", arrowtail="none"];
+"7" -> "6" [arrowhead="empty", arrowtail="none"];
+"8" -> "5" [arrowhead="empty", arrowtail="none"];
+"8" -> "6" [arrowhead="empty", arrowtail="none"];
+"8" -> "7" [arrowhead="empty", arrowtail="none"];
+}
