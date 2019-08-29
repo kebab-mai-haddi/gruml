@@ -1,0 +1,7 @@
+digraph "classes_sample_for_eric_sir" {
+charset="utf-8"
+rankdir=BT
+"0" [label="{A|\l|}", shape="record"];
+"1" [label="{B|\l|}", shape="record"];
+"0" -> "1" [arrowhead="empty", arrowtail="none"];
+}
