@@ -39,7 +39,8 @@ class GenerateUML:
                 self.class_dict[super_class_name] = [name]
 
 
-source_code = sys.argv[1]
+# source_code = sys.argv[1]
+source_code = "sample_class_module"
 source_code_data = pyclbr.readmodule(source_code)
 generate_uml = GenerateUML()
 for name, class_data in sorted(source_code_data.items(),

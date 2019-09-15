@@ -1,5 +1,8 @@
 class ABC:
-    pass
+    def add(self, x,y):
+        return (x+y)
+    
 
 class DEF(ABC):
-    pass
+    def sub(self, x,y):
+        return (x-y)
