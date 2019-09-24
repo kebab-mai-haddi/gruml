@@ -18,7 +18,8 @@ class GenerateUML:
 
     def show_methods(self, class_name, class_data):
         methods = []
-        for name, lineno in sorted(class_data.methods.items(),
+        class_data_methods = class_data.methods.items()
+        for name, lineno in sorted(class_data_methods,
                                    key=itemgetter(1)):
             # print('  Method: {0} [{1}]'.format(name, lineno))
             methods.append(name)
@@ -49,7 +50,7 @@ class GenerateUML:
 
 # source_code = sys.argv[1]
 # source_code = "sample_class_module"
-source_code = "driver"
+source_code = "aviral_gauri"
 source_code_data = pyclbr.readmodule(source_code)
 generate_uml = GenerateUML()
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
