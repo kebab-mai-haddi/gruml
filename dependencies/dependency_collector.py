@@ -82,7 +82,7 @@ class ModuleUseCollector(ast.NodeVisitor):
 
 
 collector = ModuleUseCollector('aviral')
-source = open("aviral_srivastava/srivastava.py").read()
+source = open("aviral_srivastava/aviral.py").read()
 collector.visit(ast.parse(source))
 print(collector.used_at)
 

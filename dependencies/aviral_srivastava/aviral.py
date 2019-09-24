@@ -6,3 +6,8 @@ class Aviral:
         if not name:
             return "Aviral"
         return name
+
+class Sanjay:
+    def __init__(self):
+        self.child = Aviral("Dad's calling")
+        
