@@ -1,11 +1,9 @@
-import ast
 import os
 import pyclbr
 import subprocess
 import sys
 from operator import itemgetter
 
-from dependency_collector import ModuleUseCollector
 from plot_uml_in_excel import WriteInExcel
 
 
@@ -14,7 +12,7 @@ class GenerateUML:
         self.class_dict = {}  # it will have a class:children mapping.
 
     def show_class(self, name, class_data):
-        # print(class_data)
+        print(class_data)
         self.class_dict[name] = []
         self.show_super_classes(name, class_data)
 
@@ -53,51 +51,44 @@ class GenerateUML:
 source_code = "sample_class_module"
 source_code_data = pyclbr.readmodule(source_code)
 generate_uml = GenerateUML()
-# print('-----------------------------------------')
+for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
+    print(
+        "Class: {}, Methods: {}, Parent(s): {}".format(
+            name,
+            generate_uml.show_methods(
+                name, class_data
+            ),
+            generate_uml.show_super_classes(name, class_data)
+        )
+    )
+print('-----------------------------------------')
 # create a list with all the data
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
+    print(
+        "Class: {}, Methods: {}, Child(ren): {}".format(
+            name,
+            methods,
+            children
+        )
+    )
     agg_data.append(
         {
             "Class": name,
             "Methods": methods,
-            "Children": children,
-            "File": class_data.file
+            "Children": children
         }
     )
-# print('-----------------------------------------')
-# print(agg_data)
-
-# Get the dependencies by specifying all the files for each file.
-for data in agg_data:
-    print(data)
-    print('\n')
-
-
-import sys
-sys.exit()
-
-
-for data_index in range(len(agg_data)):
-    collector = ModuleUseCollector(
-        agg_data[data_index]['File'].split('/')[-1].split('.py')[0])
-    source = open("{}.py".format(source_code)).read()
-    collector.visit(ast.parse(source))
-    # print(
-    #     "Checking file: {} in source code: {}, these are the places where it is used: {}".format(
-    #         agg_data[data_index]['File'], source_code, collector.used_at
-    #     )
-    # )
-    agg_data[data_index]['Dependencies'] = collector.used_at
-
-for data in agg_data:
-    print(data)
-    print('\n')
-
-
+print('-----------------------------------------')
+print(agg_data)
 # write_in_excel = WriteInExcel(file_name='testing_1.xlsx')
 # df = write_in_excel.create_pandas_dataframe(agg_data)
 # write_in_excel.write_df_to_excel(df, 'class_to_child')
+
+# print(generate_uml.class_dict)
+# write_in_excel = WriteInExcel(
+#     classes=generate_uml.class_dict, file_name='{}.xlsx'.format(source_code))
+# write_in_excel.form_uml_sheet_for_classes()
