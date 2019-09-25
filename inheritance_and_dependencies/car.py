@@ -16,6 +16,7 @@ class Car(Vehicle):
             self.year, mileage)
         print(self.pollution_compliance)
 
-
+class Bike(Car):
+    pass
 # car = Car('Indica', year=2017)
 # car.pollution_permit(30)
