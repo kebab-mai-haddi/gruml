@@ -35,17 +35,24 @@ class G(F, DEF, E):
     pass
 
 
-b = B()
-print(b.g())
-print(b.f())
-print(b.i)
-a = A()
-b = B()
-c = C()
-d = D()
-e = E()
-f = F()
-g = G()
-abc = ABC()
-def_ = DEF()
-g = G()
+class H:
+    def __init__(self):
+        a = A()
+        print(a.f())
+
+
+# b = B()
+# print(b.g())
+# print(b.f())
+# print(b.i)
+# a = A()
+# b = B()
+# c = C()
+# d = D()
+# e = E()
+# f = F()
+# g = G()
+# abc = ABC()
+# def_ = DEF()
+# g = G()
+# h = H()
