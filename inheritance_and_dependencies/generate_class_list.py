@@ -67,6 +67,7 @@ print('-----------------------------------------')
 # create a list with all the data
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
+files = {}
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
@@ -86,5 +87,55 @@ for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].line
             "File": class_data.file
         }
     )
+    files[class_data.file] = name
 print('-----------------------------------------')
 print(agg_data)
+
+
+for data_index in range(len(agg_data)):
+    module = agg_data[data_index]["File"].split('/')[-1].split('.py')[0]
+    used_in = []
+    for file_ in files.keys():
+        if file_ == agg_data[data_index]["File"]:
+            continue
+        collector = ModuleUseCollector(module)
+        source = open(file_).read()
+        collector.visit(ast.parse(source))
+        print('Module: {} used in file: {} at: {}'.format(
+            module, file_, collector.used_at))
+        if len(collector.used_at):
+            used_in.append(files[file_])
+    agg_data[data_index]['Dependents'] = used_in
+'''
+# checking the dependencies
+dependencies = []
+for data_index in range(len(agg_data)):
+    collector = ModuleUseCollector(
+        agg_data[data_index]['File'].split('/')[-1].split('.py')[0]
+    )
+    collector.visit(ast.parse(source))
+    dependencies.append(collector.used_at)
+
+agg_data[source_code_index]['Dependencies'] = dependencies
+# next thing, for each class, find the dependency in each class.
+
+'''
+print('------------------------------------------------------------------')
+print('FINAL')
+for data in agg_data:
+    print(data)
+    print('-----------')
+    print('\n')
+
+# The whole data is now collected and we need to form the dataframe of it:
+
+write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
+df = write_in_excel.create_pandas_dataframe(agg_data)
+sys.exit()
+write_in_excel.write_df_to_excel(df, 'class_to_child')
+'''
+print(generate_uml.class_dict)
+write_in_excel = WriteInExcel(
+    classes=generate_uml.class_dict, file_name='{}.xlsx'.format(source_code))
+write_in_excel.form_uml_sheet_for_classes()
+'''
