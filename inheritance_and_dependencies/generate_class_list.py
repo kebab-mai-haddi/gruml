@@ -131,8 +131,7 @@ for data in agg_data:
 
 write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data)
-sys.exit()
-write_in_excel.write_df_to_excel(df, 'class_to_child')
+write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')
 '''
 print(generate_uml.class_dict)
 write_in_excel = WriteInExcel(
