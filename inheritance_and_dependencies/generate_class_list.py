@@ -53,16 +53,6 @@ class GenerateUML:
 source_code = "car"
 source_code_data = pyclbr.readmodule(source_code)
 generate_uml = GenerateUML()
-for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-    print(
-        "Class: {}, Methods: {}, Parent(s): {}".format(
-            name,
-            generate_uml.show_methods(
-                name, class_data
-            ),
-            generate_uml.show_super_classes(name, class_data)
-        )
-    )
 print('-----------------------------------------')
 # create a list with all the data
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
@@ -70,18 +60,12 @@ agg_data = []
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
-    print(
-        "Class: {}, Methods: {}, Child(ren): {}".format(
-            name,
-            methods,
-            children
-        )
-    )
     agg_data.append(
         {
             "Class": name,
             "Methods": methods,
-            "Children": children
+            "Children": children,
+            "File": class_data.file
         }
     )
 print('-----------------------------------------')
@@ -89,14 +73,15 @@ print(agg_data)
 
 # Get the dependencies by specifying all the files for each file.
 for class_ in agg_data:
-    collector = ModuleUseCollector(class_['Class'])
+    collector = ModuleUseCollector(class_['File'].split('/')[-1].split('.py')[0])
     source = open("{}.py".format(source_code)).read()
     collector.visit(ast.parse(source))
     print(
-        "Checking class {} in source code: {}, these are the places where it is used: {}".format(
-            class_['Class'], source_code, collector.used_at
+        "Checking file: {} in source code: {}, these are the places where it is used: {}".format(
+            class_['File'], source_code, collector.used_at
         )
     )
+
 
 # write_in_excel = WriteInExcel(file_name='testing_1.xlsx')
 # df = write_in_excel.create_pandas_dataframe(agg_data)
