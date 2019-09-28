@@ -71,6 +71,8 @@ print('-----------------------------------------')
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
 files = {}
+class_index = {}
+counter = 0
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
@@ -87,48 +89,55 @@ for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].line
             "Class": name,
             "Methods": methods,
             "Children": children,
-            "File": class_data.file
+            "File": class_data.file,
+            "Start Line": class_data.lineno,
+            "End Line": class_data.endline,
+            "Dependents": []
         }
     )
-    files[class_data.file] = name
+    if files.get(class_data.file, None):
+        files[class_data.file].append(
+            {
+                'class': name,
+                'start_line': class_data.lineno,
+                'end_line': class_data.endline
+            }
+        )
+    else:
+        files[class_data.file] = [
+            {
+                'class': name,
+                'start_line': class_data.lineno,
+                'end_line': class_data.endline
+            }
+        ]
+    class_index[name] = counter
+    counter += 1
 print('-----------------------------------------')
 # print(agg_data)
 
-
-for data_index in range(len(agg_data)):
-    agg_data[data_index]['Dependents'] = None
-    module = agg_data[data_index]["File"].split('/')[-1].split('.py')[0]
-    used_in = []
-    for file_ in files.keys():
-        if file_ == agg_data[data_index]["File"]:
+for file_ in files.keys():
+    module = file_.split('/')[-1].split('.py')[0]
+    for j in files.keys():
+        if file_ == j:
             continue
+        source = open(j).read()
         collector = ModuleUseCollector(module)
-        source = open(file_).read()
         collector.visit(ast.parse(source))
-        print('Module: {} used in file: {} at: {}'.format(
-            module, file_, collector.used_at))
-        if len(collector.used_at):
-            used_in.append(files[file_])
-    agg_data[data_index]['Dependents'] = used_in
-'''
-# checking the dependencies
-dependencies = []
-for data_index in range(len(agg_data)):
-    collector = ModuleUseCollector(
-        agg_data[data_index]['File'].split('/')[-1].split('.py')[0]
-    )
-    collector.visit(ast.parse(source))
-    dependencies.append(collector.used_at)
+        for use_ in collector.used_at:
+            _class = use_[0].split(".")[-1]
+            alias = use_[1]
+            line_no = use_[2]
+            for class_ in files[j]:
+                if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
+                    agg_data[class_index[_class]]['Dependents'].append(class_[
+                                                                       'class'])
 
-agg_data[source_code_index]['Dependencies'] = dependencies
-# next thing, for each class, find the dependency in each class.
 
-'''
-print('------------------------------------------------------------------')
 print('FINAL')
 for data in agg_data:
     print(data)
-    print('-----------')
+    print('========')
     print('\n')
 
 # The whole data is now collected and we need to form the dataframe of it:
