@@ -51,16 +51,19 @@ class GenerateUML:
 
 source_code = "car"
 source_code_data = pyclbr.readmodule(source_code)
+print(source_code_data)
 generate_uml = GenerateUML()
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     print(
-        "Class: {}, Methods: {}, Parent(s): {}, File: {}".format(
+        "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
             name,
             generate_uml.show_methods(
                 name, class_data
             ),
             generate_uml.show_super_classes(name, class_data),
-            class_data.file
+            class_data.file,
+            class_data.lineno,
+            class_data.endline
         )
     )
 print('-----------------------------------------')
@@ -71,14 +74,14 @@ files = {}
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
-    print(
-        "Class: {}, Methods: {}, Child(ren): {}, File: {}".format(
-            name,
-            methods,
-            children,
-            class_data.file
-        )
-    )
+    # print(
+    #     "Class: {}, Methods: {}, Child(ren): {}, File: {}".format(
+    #         name,
+    #         methods,
+    #         children,
+    #         class_data.file
+    #     )
+    # )
     agg_data.append(
         {
             "Class": name,
@@ -89,10 +92,11 @@ for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].line
     )
     files[class_data.file] = name
 print('-----------------------------------------')
-print(agg_data)
+# print(agg_data)
 
 
 for data_index in range(len(agg_data)):
+    agg_data[data_index]['Dependents'] = None
     module = agg_data[data_index]["File"].split('/')[-1].split('.py')[0]
     used_in = []
     for file_ in files.keys():
@@ -128,10 +132,11 @@ for data in agg_data:
     print('\n')
 
 # The whole data is now collected and we need to form the dataframe of it:
-
+'''
 write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data)
 write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')
+'''
 '''
 print(generate_uml.class_dict)
 write_in_excel = WriteInExcel(

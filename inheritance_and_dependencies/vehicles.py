@@ -5,3 +5,6 @@ class Vehicle:
     def mileage_calculator(self, distance, capacity):
         self.mileage = distance/capacity
         return self.mileage
+        c = 2
+b = 1
+a = 4
