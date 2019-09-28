@@ -5,6 +5,13 @@ class Vehicle:
     def mileage_calculator(self, distance, capacity):
         self.mileage = distance/capacity
         return self.mileage
-        c = 2
-b = 1
-a = 4
+
+
+class Farzi:
+    def __init__(self, farzi):
+        self.farzi = farzi
+
+    def check_farzi(self, name):
+        if name == self.farzi:
+            return True
+        return False
