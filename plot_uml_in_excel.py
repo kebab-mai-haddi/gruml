@@ -31,21 +31,31 @@ class WriteInExcel:
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
         df = pd.DataFrame(
             index=np.arange(0, number_of_rows),
-            columns=['Parent', 'Methods/Children']
+            columns=['Dependents', 'Parent', 'Methods/Children']
         )
         row_counter = 0
+        prev_class_row_counter = 0
         for class_data in agg_data:
             base_class = class_data['Class']
             methods = class_data['Methods']
             children = class_data['Children']
-            df.loc[row_counter] = [base_class, '']
+            dependents = class_data['Dependents']
+            df.loc[row_counter] = ['', base_class, '']
             row_counter += 1
             for method in methods:
-                df.loc[row_counter] = ['', method]
+                df.at[row_counter, 'Methods/Children'] = method
                 row_counter += 1
             for child in children:
-                df.loc[row_counter] = ['', child]
+                df.at[row_counter, 'Methods/Children'] = child
                 row_counter += 1
+            for dependent in dependents:
+                df.at[prev_class_row_counter+1, 'Dependents'] = dependent
+                row_counter += 1
+            prev_class_row_counter = row_counter
+        # convert all NaN to None.
+        df = df.replace(np.nan, '', regex=True)
+        print("Create DF was called.")
+        print(df)
         return df
 
     # def form_uml_sheet_for_classes(self):
