@@ -50,6 +50,7 @@ class WriteInExcel:
                 row_counter += 1
             for dependent in dependents:
                 df.at[prev_class_row_counter+1, 'Dependents'] = dependent
+                prev_class_row_counter += 1
                 row_counter += 1
             prev_class_row_counter = row_counter
         # convert all NaN to None.
