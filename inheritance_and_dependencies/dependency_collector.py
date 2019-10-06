@@ -14,7 +14,6 @@ class ModuleUseCollector(ast.NodeVisitor):
         # and so masks a name in the global namespace.
         self.scopes = ChainMap()
         self.used_at = []  # list of (name, alias, line) entries
-        print("{} is the self.modulepackage".format(self.modulepackage))
 
     def visit_FunctionDef(self, node):
         self.scopes = self.scopes.new_child()
@@ -79,12 +78,3 @@ class ModuleUseCollector(ast.NodeVisitor):
         if imported_name is None:
             return
         self.used_at.append((imported_name, node.id, node.lineno))
-
-
-collector = ModuleUseCollector('aviral')
-source = open("aviral_srivastava/srivastava.py").read()
-collector.visit(ast.parse(source))
-print(collector.used_at)
-
-
-# now iterate over all the classes in order to check what all classes are dependent on each other.
