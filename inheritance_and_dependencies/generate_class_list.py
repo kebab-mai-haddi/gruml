@@ -76,14 +76,6 @@ counter = 0
 for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
     methods = generate_uml.show_methods(name, class_data)
     children = generate_uml.get_children(name)
-    # print(
-    #     "Class: {}, Methods: {}, Child(ren): {}, File: {}".format(
-    #         name,
-    #         methods,
-    #         children,
-    #         class_data.file
-    #     )
-    # )
     agg_data.append(
         {
             "Class": name,
@@ -114,7 +106,7 @@ for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].line
     class_index[name] = counter
     counter += 1
 print('-----------------------------------------')
-# print(agg_data)
+
 
 for file_ in files.keys():
     module = file_.split('/')[-1].split('.py')[0]
@@ -141,14 +133,7 @@ for data in agg_data:
     print('\n')
 
 # The whole data is now collected and we need to form the dataframe of it:
-'''
-write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
+
+write_in_excel = WriteInExcel(file_name='dependency_2.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data)
 write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')
-'''
-'''
-print(generate_uml.class_dict)
-write_in_excel = WriteInExcel(
-    classes=generate_uml.class_dict, file_name='{}.xlsx'.format(source_code))
-write_in_excel.form_uml_sheet_for_classes()
-'''
