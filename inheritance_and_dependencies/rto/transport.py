@@ -1,4 +1,7 @@
-class CarPollutionPermit:
+from vehicles import Vehicle, Farzi
+
+
+class CarPollutionPermit(Farzi):
     def __init__(self):
         self.permit = False
 

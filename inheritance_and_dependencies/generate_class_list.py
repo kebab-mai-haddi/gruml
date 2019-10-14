@@ -49,24 +49,39 @@ class GenerateUML:
         return []
 
 
-source_code = "car"
+package_path = "rto"
+working_dir = os.getcwd()
+os.chdir(package_path)
+print("Currently in {}".format(os.getcwd()))
+source_code = 'car'
+python3 = sys.executable
 source_code_data = pyclbr.readmodule(source_code)
-print(source_code_data)
-generate_uml = GenerateUML()
-for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-    print(
-        "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
-            name,
-            generate_uml.show_methods(
-                name, class_data
-            ),
-            generate_uml.show_super_classes(name, class_data),
-            class_data.file,
-            class_data.lineno,
-            class_data.endline
+sys.exit()
+source_codes = []
+for file_ in os.listdir(os.getcwd()):
+    if os.path.isfile(file_) and file_.endswith('.py'):
+        source_codes.append(file_.split('.py')[0])
+
+for source_code in source_codes:
+    print('{} {}'.format(os.getcwd(), source_code))
+    source_code_data = pyclbr.readmodule(source_code)
+    print(source_code_data)
+    generate_uml = GenerateUML()
+    for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
+        print(
+            "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
+                name,
+                generate_uml.show_methods(
+                    name, class_data
+                ),
+                generate_uml.show_super_classes(name, class_data),
+                class_data.file,
+                class_data.lineno,
+                class_data.endline
+            )
         )
-    )
-print('-----------------------------------------')
+        print('$$-----------------------------------------$$')
+sys.exit()
 # create a list with all the data
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
@@ -103,34 +118,31 @@ for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].line
                 'end_line': class_data.endline
             }
         ]
-    class_index[name] = counter
-    counter += 1
-print('-----------------------------------------')
+        class_index[name] = counter
+        counter += 1
+    print('-----------------------------------------')
+    for file_ in files.keys():
+        module = file_.split('/')[-1].split('.py')[0]
+        for j in files.keys():
+            if file_ == j:
+                continue
+            source = open(j).read()
+            collector = ModuleUseCollector(module)
+            collector.visit(ast.parse(source))
+            for use_ in collector.used_at:
+                _class = use_[0].split(".")[-1]
+                alias = use_[1]
+                line_no = use_[2]
+                for class_ in files[j]:
+                    if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
+                        agg_data[class_index[_class]]['Dependents'].append(class_[
+                            'class'])
 
-
-for file_ in files.keys():
-    module = file_.split('/')[-1].split('.py')[0]
-    for j in files.keys():
-        if file_ == j:
-            continue
-        source = open(j).read()
-        collector = ModuleUseCollector(module)
-        collector.visit(ast.parse(source))
-        for use_ in collector.used_at:
-            _class = use_[0].split(".")[-1]
-            alias = use_[1]
-            line_no = use_[2]
-            for class_ in files[j]:
-                if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
-                    agg_data[class_index[_class]]['Dependents'].append(class_[
-                                                                       'class'])
-
-
-print('FINAL')
-for data in agg_data:
-    print(data)
-    print('========')
-    print('\n')
+    print('FINAL')
+    for data in agg_data:
+        print(data)
+        print('========')
+        print('\n')
 
 # The whole data is now collected and we need to form the dataframe of it:
 
