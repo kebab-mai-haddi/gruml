@@ -49,22 +49,20 @@ class GenerateUML:
         return []
 
 
-package_path = "rto"
-working_dir = os.getcwd()
-os.chdir(package_path)
-print("Currently in {}".format(os.getcwd()))
-source_code = 'car'
-python3 = sys.executable
-source_code_data = pyclbr.readmodule(source_code)
-sys.exit()
+package_path = "rto/"
 source_codes = []
-for file_ in os.listdir(os.getcwd()):
-    if os.path.isfile(file_) and file_.endswith('.py'):
-        source_codes.append(file_.split('.py')[0])
+for file_ in os.listdir(package_path):
+    if os.path.isfile(os.path.join(package_path, file_)):
+        if file_.endswith('.py'):
+            source_codes.append(file_.split('.py')[0])
 
+agg_data = []
+files = {}
+class_index = {}
+counter = 0
 for source_code in source_codes:
     print('{} {}'.format(os.getcwd(), source_code))
-    source_code_data = pyclbr.readmodule(source_code)
+    source_code_data = pyclbr.readmodule(source_code, path=[package_path])
     print(source_code_data)
     generate_uml = GenerateUML()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
@@ -81,7 +79,62 @@ for source_code in source_codes:
             )
         )
         print('$$-----------------------------------------$$')
+        methods = generate_uml.show_methods(name, class_data)
+        children = generate_uml.get_children(name)
+        agg_data.append(
+            {
+                "Class": name,
+                "Methods": methods,
+                "Children": children,
+                "File": class_data.file,
+                "Start Line": class_data.lineno,
+                "End Line": class_data.endline,
+                "Dependents": []
+            }
+        )
+        if files.get(class_data.file, None):
+            files[class_data.file].append(
+                {
+                    'class': name,
+                    'start_line': class_data.lineno,
+                    'end_line': class_data.endline
+                }
+            )
+        else:
+            files[class_data.file] = [
+                {
+                    'class': name,
+                    'start_line': class_data.lineno,
+                    'end_line': class_data.endline
+                }
+            ]
+            class_index[name] = counter
+            counter += 1
+        print('-----------------------------------------')
+        for file_ in files.keys():
+            module = file_.split('/')[-1].split('.py')[0]
+            for j in files.keys():
+                if file_ == j:
+                    continue
+                source = open(j).read()
+                collector = ModuleUseCollector(module)
+                collector.visit(ast.parse(source))
+                for use_ in collector.used_at:
+                    _class = use_[0].split(".")[-1]
+                    alias = use_[1]
+                    line_no = use_[2]
+                    for class_ in files[j]:
+                        if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
+                            agg_data[class_index[_class]]['Dependents'].append(class_[
+                                'class'])
+
+print('FINAL')
+for data in agg_data:
+    print(data)
+    print('========')
+    print('\n')
 sys.exit()
+
 # create a list with all the data
 # the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
