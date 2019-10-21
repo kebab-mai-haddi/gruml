@@ -5,7 +5,7 @@ class CarPollutionPermit:
     def check_permit(self, year, mileage):
         if year < 2016:
             return False
-        if mileage < 15:
+        if mileage > 15:
             return True
         return False
 
@@ -34,3 +34,13 @@ class TractorPollutionPermit:
         if year > 2017:
             return True
         return False
+
+
+class TractorPesticides(TractorPollutionPermit):
+    def fetch_pesticides_permit(self, pesticide_effect):
+        if pesticide_effect < 10:
+            if self.fetch_tractor(2019, True):
+                return True
+            return False
+        car_pollution_permit = CarPollutionPermit()
+        return (car_pollution_permit.check_permit(2019, 16))
