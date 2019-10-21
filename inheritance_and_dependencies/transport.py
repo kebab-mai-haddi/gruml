@@ -1,7 +1,4 @@
-from vehicles import Vehicle, Farzi
-
-
-class CarPollutionPermit(Farzi):
+class CarPollutionPermit:
     def __init__(self):
         self.permit = False
 
@@ -28,3 +25,12 @@ class BikePollutionPermit:
             return False
         self.permit = True
         return True
+
+
+class TractorPollutionPermit:
+    def fetch_tractor(self, year, is_farmer):
+        if year > 2015 and is_farmer:
+            return True
+        if year > 2017:
+            return True
+        return False
