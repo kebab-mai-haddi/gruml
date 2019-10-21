@@ -49,79 +49,76 @@ class GenerateUML:
         return []
 
 
-source_code = "car"
-source_code_data = pyclbr.readmodule(source_code)
-print(source_code_data)
-generate_uml = GenerateUML()
-for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-    print(
-        "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
-            name,
-            generate_uml.show_methods(
-                name, class_data
-            ),
-            generate_uml.show_super_classes(name, class_data),
-            class_data.file,
-            class_data.lineno,
-            class_data.endline
-        )
-    )
-print('-----------------------------------------')
-# create a list with all the data
-# the frame of the list is: [{}, {}, {},....] where each dict is: {"name": <>, "methods": [], "children": []}
+source_codes = ["transport", "car", "vehicles"]
+
+# list of dicts where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
 # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
 files = {}
 class_index = {}
 counter = 0
-for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-    methods = generate_uml.show_methods(name, class_data)
-    children = generate_uml.get_children(name)
-    # print(
-    #     "Class: {}, Methods: {}, Child(ren): {}, File: {}".format(
-    #         name,
-    #         methods,
-    #         children,
-    #         class_data.file
-    #     )
-    # )
-    agg_data.append(
-        {
-            "Class": name,
-            "Methods": methods,
-            "Children": children,
-            "File": class_data.file,
-            "Start Line": class_data.lineno,
-            "End Line": class_data.endline,
-            "Dependents": []
-        }
-    )
-    if files.get(class_data.file, None):
-        files[class_data.file].append(
+# to check if a class has already been covered due to some import in another file.
+classes_covered = {}
+
+for source_code in source_codes:
+    source_code_data = pyclbr.readmodule(source_code)
+    generate_uml = GenerateUML()
+    for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
+        print(
+            "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
+                name,
+                generate_uml.show_methods(
+                    name, class_data
+                ),
+                generate_uml.show_super_classes(name, class_data),
+                class_data.file,
+                class_data.lineno,
+                class_data.endline
+            )
+        )
+        print('-----------------------------------------')
+    print('=======================================')
+
+    for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
+        methods = generate_uml.show_methods(name, class_data)
+        children = generate_uml.get_children(name)
+        if classes_covered.get(name):
+            continue
+        agg_data.append(
             {
-                'class': name,
-                'start_line': class_data.lineno,
-                'end_line': class_data.endline
+                "Class": name,
+                "Methods": methods,
+                "Children": children,
+                "File": class_data.file,
+                "Start Line": class_data.lineno,
+                "End Line": class_data.endline,
+                "Dependents": []
             }
         )
-    else:
-        files[class_data.file] = [
-            {
-                'class': name,
-                'start_line': class_data.lineno,
-                'end_line': class_data.endline
-            }
-        ]
-    class_index[name] = counter
-    counter += 1
-print('-----------------------------------------')
-# print(agg_data)
-
+        if files.get(class_data.file, None):
+            files[class_data.file].append(
+                {
+                    'class': name,
+                    'start_line': class_data.lineno,
+                    'end_line': class_data.endline
+                }
+            )
+        else:
+            files[class_data.file] = [
+                {
+                    'class': name,
+                    'start_line': class_data.lineno,
+                    'end_line': class_data.endline
+                }
+            ]
+        class_index[name] = counter
+        counter += 1
+        classes_covered[name] = 1
+print('\n')
+# extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
 for file_ in files.keys():
     module = file_.split('/')[-1].split('.py')[0]
     for j in files.keys():
-        if file_ == j:
-            continue
         source = open(j).read()
         collector = ModuleUseCollector(module)
         collector.visit(ast.parse(source))
@@ -134,6 +131,9 @@ for file_ in files.keys():
                     agg_data[class_index[_class]]['Dependents'].append(class_[
                                                                        'class'])
 
+# checking intra-file dependencies i.e. if a class is used in another class of the same module(file).
+# for file_ in files.keys():
+#     source = 
 
 print('FINAL')
 for data in agg_data:
@@ -145,7 +145,7 @@ for data in agg_data:
 
 write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data)
-write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')
+write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')           
 
 '''
 print(generate_uml.class_dict)
