@@ -132,20 +132,22 @@ for file_ in files.keys():
                                                                        'class'])
 
 # checking intra-file dependencies i.e. if a class is used in another class of the same module(file).
-# for file_ in files.keys():
-#     source = 
+
 
 print('FINAL')
+skip_cols = 0
 for data in agg_data:
+    skip_cols += len(data['Dependents'])
     print(data)
     print('========')
     print('\n')
 
 # The whole data is now collected and we need to form the dataframe of it:
 
-write_in_excel = WriteInExcel(file_name='dependency_1.xlsx')
-df = write_in_excel.create_pandas_dataframe(agg_data)
-write_in_excel.write_df_to_excel(df, 'class_to_child_and_dependents')           
+write_in_excel = WriteInExcel(file_name='dependency_2.xlsx')
+df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
+write_in_excel.write_df_to_excel(
+    df, 'class_to_child_and_dependents', skip_cols)
 
 '''
 print(generate_uml.class_dict)
