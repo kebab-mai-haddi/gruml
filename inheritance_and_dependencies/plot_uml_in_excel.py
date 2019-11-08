@@ -60,6 +60,7 @@ class WriteInExcel:
                     dependents_col_counter[dependent].append(column_counter)
                 else:
                     dependents_col_counter[dependent] = [column_counter]
+            if dependents:
                 column_counter -= 1
             prev_class_row_counter = row_counter
 
@@ -93,7 +94,8 @@ class WriteInExcel:
                 # the second addition of changing 0-indexed to 1-indexed comes in the next line while plotting.
                 # Now, second index of list is +2 so that we can cover the full range(0 to 3 is to be covered,
                 # so for loop would be from range(0,4))
-                for row_iterator in range(row_range[0]+1, row_range[1]+2):
+                # get the first and last row to draw the dark edges.
+                for row_iterator in range(row_range[0]+1, row_range[-1]+2):
                     ws['{}{}'.format(column_letter, row_iterator+1)
                        ].border = Border(left=bd)
             col_check_counter += 1

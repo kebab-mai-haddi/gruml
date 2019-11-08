@@ -137,7 +137,9 @@ for file_ in files.keys():
 print('FINAL')
 skip_cols = 0
 for data in agg_data:
-    skip_cols += len(data['Dependents'])
+    # if a class is dependent on this current class, a column has to be dedicated for this one.
+    if data['Dependents']:
+        skip_cols += 1
     print(data)
     print('========')
     print('\n')
