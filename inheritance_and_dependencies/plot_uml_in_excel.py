@@ -35,6 +35,18 @@ class WriteInExcel:
         class_row_mapping = {}  # class: row number mapping
         self.dark_edges_column = defaultdict(list)
         prev_class_row_counter = 0
+        # hyperlink mapping:
+        '''
+        {
+            <Class_Name>: {
+                'child_at': [],
+                class_cell: <r,c where the class has been placed>
+            }
+        }
+
+        # all rows and cols are 0-indexed.
+        '''
+        self.hyperlink_mapping = {}
         for class_data in agg_data:
             base_class = class_data['Class']
             class_row_mapping[base_class] = row_counter
@@ -44,6 +56,13 @@ class WriteInExcel:
             columns = ['' for _ in range(skip_cols)]
             df.loc[row_counter] = columns + [base_class, '']
             row_counter += 1
+            if base_class in self.hyperlink_mapping:
+                self.hyperlink_mapping[base_class]['class_cell'] = (
+                    row_counter, skip_cols+1)
+            else:
+                self.hyperlink_mapping[base_class] = {
+                    'class_cell': (row_counter, skip_cols)
+                }
             for method in methods:
                 print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     method, base_class, row_counter, skip_cols+1))
@@ -51,6 +70,13 @@ class WriteInExcel:
                 row_counter += 1
             for child in children:
                 df.iloc[row_counter, skip_cols+1] = child
+                if self.hyperlink_mapping.get(child):
+                    self.hyperlink_mapping[child]['child_at'].append(
+                        (row_counter, skip_cols+1))
+                else:
+                    self.hyperlink_mapping[child] = {
+                        'child_at': [(row_counter, skip_cols+1)]
+                    }
                 row_counter += 1
             for dependent in dependents:
                 df.iloc[prev_class_row_counter, column_counter] = "→"
@@ -76,13 +102,18 @@ class WriteInExcel:
         print(df)
         return df
 
-    def write_df_to_excel(self, df, sheet_name):
+    def write_df_to_excel(self, df, sheet_name, skip_cols):
         df.to_excel(self.writer, sheet_name=sheet_name,
                     header=True, index=False)
         self.writer.save()
         self.writer.close()
         wb = load_workbook(filename=self.file_name)
         ws = wb[sheet_name]
+        ws.column_dimensions['{}'.format(get_column_letter(
+            skip_cols+1))].width = 8.4  # len(Parent) = (6+1)*1.2
+        # len(Methods/Children) + 1(M) + 1(C) + 1(/) = 19*1.2
+        ws.column_dimensions['{}'.format(
+            get_column_letter(skip_cols+2))].width = 22.8
         bd = Side(style='thick', color='000000')
         # to check whether a col in sheet's columns has arrived for dark edges.
         col_check_counter = 0
@@ -96,8 +127,24 @@ class WriteInExcel:
                 # so for loop would be from range(0,4))
                 # get the first and last row to draw the dark edges.
                 for row_iterator in range(row_range[0]+1, row_range[-1]+2):
+                    print('{}{}'.format(column_letter, row_iterator+1))
                     ws['{}{}'.format(column_letter, row_iterator+1)
                        ].border = Border(left=bd)
             col_check_counter += 1
+        # link = "#{}!D18".format('Sheet1')
+        print(self.hyperlink_mapping)
+        for hyperlink_class in self.hyperlink_mapping.keys():
+            if 'child_at' in self.hyperlink_mapping[hyperlink_class]:
+                for posn_as_a_child in self.hyperlink_mapping[hyperlink_class]['child_at']:
+                    row = posn_as_a_child[0]+2
+                    column = posn_as_a_child[1]+1
+                    hyperlink_column_letter = get_column_letter(
+                        self.hyperlink_mapping[hyperlink_class]['class_cell'][1])
+                    hyperlink_row = self.hyperlink_mapping[hyperlink_class]['class_cell'][0]+1
+                    ws.cell(
+                        # row+2 because of the header and one for 1-indexed
+                        row=row, column=column
+                    ).hyperlink = '#{}!{}{}'.format(sheet_name, hyperlink_column_letter, hyperlink_row)
+        # ws.cell(row=16, column=5).hyperlink = '#{}!D18'.format(sheet_name)
         wb.save(self.file_name)
         print("{} done!".format(sheet_name))

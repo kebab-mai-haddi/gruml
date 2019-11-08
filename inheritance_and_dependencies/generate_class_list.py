@@ -146,10 +146,10 @@ for data in agg_data:
 
 # The whole data is now collected and we need to form the dataframe of it:
 
-write_in_excel = WriteInExcel(file_name='dependency_2.xlsx')
+write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
-    df, 'class_to_child_and_dependents')
+    df, 'sheet_one', skip_cols)
 
 '''
 print(generate_uml.class_dict)
