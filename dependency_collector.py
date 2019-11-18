@@ -22,7 +22,7 @@ class ModuleUseCollector(ast.NodeVisitor):
 
     def visit_Lambda(self, node):
         # lambdas are just functions, albeit with no statements
-        self.visit_FunctionDef(node)
+        self.visit_Function(node)
 
     def visit_ClassDef(self, node):
         # class scope is a special local scope that is re-purposed to form
@@ -78,9 +78,3 @@ class ModuleUseCollector(ast.NodeVisitor):
         if imported_name is None:
             return
         self.used_at.append((imported_name, node.id, node.lineno))
-
-
-collector = ModuleUseCollector('gauri', 'aviral')
-collector.visit(ast.parse("driver.py"))
-for name, alias, line in collector.used_at:
-    print(f'{name} ({alias}) used on line {line}')
