@@ -1,7 +1,0 @@
-digraph "classes" {
-charset="utf-8"
-rankdir=BT
-"0" [label="{ABC|\l|}", shape="record"];
-"1" [label="{DEF|\l|}", shape="record"];
-"1" -> "0" [arrowhead="empty", arrowtail="none"];
-}
