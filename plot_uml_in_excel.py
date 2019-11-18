@@ -66,7 +66,7 @@ class WriteInExcel:
             for method in methods:
                 print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     method, base_class, row_counter, skip_cols+1))
-                df.iloc[row_counter, skip_cols+1] = method
+                df.iloc[row_counter, skip_cols] = method
                 row_counter += 1
             for child in children:
                 df.iloc[row_counter, skip_cols+1] = child
