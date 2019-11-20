@@ -16,78 +16,59 @@ class WriteInExcel:
     def get_number_of_rows_in_df(self, agg_data):
         number_of_rows = 0
         for class_dict in agg_data:
-            number_of_rows += 1 + \
-                len(class_dict['Methods']) + len(class_dict['Children'])
+            number_of_rows += 1 + len(class_dict['Methods'])
         return number_of_rows
 
-    def create_pandas_dataframe(self, agg_data, skip_cols):
+    def create_pandas_dataframe(self, agg_data, skip_for_parents, skip_for_dependents):
+        skip_cols = skip_for_parents + skip_for_dependents
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
         print('Number of rows in total: {}'.format(number_of_rows))
         columns = ['' for _ in range(skip_cols)]
         df = pd.DataFrame(
             index=np.arange(0, number_of_rows),
-            columns=columns+['Parent', 'Methods/Children']
+            columns=columns+['Class']
         )
         row_counter = 0
         column_counter = skip_cols-1
+        skip_for_dependents -= 1
         # mapping to store row, col for dependents.
         dependents_col_counter = {}
+        # mapping to store: {'class': {'Parents': [parent1, parent2], 'column': column_counter}}
+        children_col_counter = {}
+        # parent: child mapping created just for plotting tree like line
+        parent_to_child_mapping = defaultdict(list)
         class_row_mapping = {}  # class: row number mapping
         self.dark_edges_column = defaultdict(list)
+        self.inheritance_edges_column = defaultdict(list)
         prev_class_row_counter = 0
-        # hyperlink mapping:
-        '''
-        {
-            <Class_Name>: {
-                'child_at': [],
-                class_cell: <r,c where the class has been placed>
-            }
-        }
-
-        # all rows and cols are 0-indexed.
-        '''
-        self.hyperlink_mapping = {}
         for class_data in agg_data:
             base_class = class_data['Class']
             class_row_mapping[base_class] = row_counter
             methods = class_data['Methods']
-            children = class_data['Children']
+            parents = class_data['Parents']
             dependents = class_data['Dependents']
             columns = ['' for _ in range(skip_cols)]
-            df.loc[row_counter] = columns + [base_class, '']
+            df.loc[row_counter] = columns + [base_class]
             row_counter += 1
-            if base_class in self.hyperlink_mapping:
-                self.hyperlink_mapping[base_class]['class_cell'] = (
-                    row_counter, skip_cols+1)
-            else:
-                self.hyperlink_mapping[base_class] = {
-                    'class_cell': (row_counter, skip_cols)
-                }
             for method in methods:
                 print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     method, base_class, row_counter, skip_cols+1))
-                df.iloc[row_counter, skip_cols+1] = method
+                df.iloc[row_counter, skip_cols] = method
                 row_counter += 1
-            for child in children:
-                df.iloc[row_counter, skip_cols+1] = child
-                if self.hyperlink_mapping.get(child):
-                    self.hyperlink_mapping[child]['child_at'].append(
-                        (row_counter, skip_cols+1))
-                else:
-                    self.hyperlink_mapping[child] = {
-                        'child_at': [(row_counter, skip_cols+1)]
-                    }
-                row_counter += 1
+            if parents:
+                for parent in parents:
+                    parent_to_child_mapping[parent].append(base_class)
             for dependent in dependents:
-                df.iloc[prev_class_row_counter, column_counter] = "→"
-                self.dark_edges_column[column_counter].append(
+                df.iloc[prev_class_row_counter, skip_for_dependents] = "→"
+                self.dark_edges_column[skip_for_dependents].append(
                     prev_class_row_counter)
                 if dependents_col_counter.get(dependent, None):
-                    dependents_col_counter[dependent].append(column_counter)
+                    dependents_col_counter[dependent].append(
+                        skip_for_dependents)
                 else:
-                    dependents_col_counter[dependent] = [column_counter]
+                    dependents_col_counter[dependent] = [skip_for_dependents]
             if dependents:
-                column_counter -= 1
+                skip_for_dependents -= 1
             prev_class_row_counter = row_counter
 
         for dependent in dependents_col_counter.keys():
@@ -96,13 +77,24 @@ class WriteInExcel:
                 self.dark_edges_column[column].append(
                     class_row_mapping[dependent])
 
+        for parent in parent_to_child_mapping.keys():
+            df.iloc[class_row_mapping[parent]][column_counter] = "▷"
+            for child in parent_to_child_mapping[parent]:
+                df.iloc[class_row_mapping[child]][column_counter] = "◁"
+                self.inheritance_edges_column[column_counter].append(
+                    class_row_mapping[child])
+            self.inheritance_edges_column[column_counter].append(
+                class_row_mapping[parent])
+            column_counter -= 1
+
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
         print("Create DF was called.")
         print(df)
         return df
 
-    def write_df_to_excel(self, df, sheet_name, skip_cols):
+    def write_df_to_excel(self, df, sheet_name, skip_for_children, skip_for_dependents):
+        skip_cols = skip_for_children + skip_for_dependents
         df.to_excel(self.writer, sheet_name=sheet_name,
                     header=True, index=False)
         self.writer.save()
@@ -115,6 +107,7 @@ class WriteInExcel:
         ws.column_dimensions['{}'.format(
             get_column_letter(skip_cols+2))].width = 22.8
         bd = Side(style='thick', color='000000')
+        bd_inheritance = Side(style='thick', color='FF0000')
         # to check whether a col in sheet's columns has arrived for dark edges.
         col_check_counter = 0
         for _ in ws.columns:
@@ -130,21 +123,14 @@ class WriteInExcel:
                     print('{}{}'.format(column_letter, row_iterator+1))
                     ws['{}{}'.format(column_letter, row_iterator+1)
                        ].border = Border(left=bd)
+            if col_check_counter in self.inheritance_edges_column:
+                column_letter = get_column_letter(col_check_counter+1)
+                row_range = sorted(
+                    self.inheritance_edges_column[col_check_counter])
+                for row_iterator in range(row_range[0]+1, row_range[-1]+2):
+                    print('{}{}'.format(column_letter, row_iterator+1))
+                    ws['{}{}'.format(column_letter, row_iterator+1)
+                       ].border = Border(left=bd_inheritance)
             col_check_counter += 1
-        # link = "#{}!D18".format('Sheet1')
-        print(self.hyperlink_mapping)
-        for hyperlink_class in self.hyperlink_mapping.keys():
-            if 'child_at' in self.hyperlink_mapping[hyperlink_class]:
-                for posn_as_a_child in self.hyperlink_mapping[hyperlink_class]['child_at']:
-                    row = posn_as_a_child[0]+2
-                    column = posn_as_a_child[1]+1
-                    hyperlink_column_letter = get_column_letter(
-                        self.hyperlink_mapping[hyperlink_class]['class_cell'][1])
-                    hyperlink_row = self.hyperlink_mapping[hyperlink_class]['class_cell'][0]+1
-                    ws.cell(
-                        # row+2 because of the header and one for 1-indexed
-                        row=row, column=column
-                    ).hyperlink = '#{}!{}{}'.format(sheet_name, hyperlink_column_letter, hyperlink_row)
-        # ws.cell(row=16, column=5).hyperlink = '#{}!D18'.format(sheet_name)
         wb.save(self.file_name)
         print("{} done!".format(sheet_name))

@@ -17,7 +17,7 @@ class Car(Vehicle):
         print(self.pollution_compliance)
 
 
-class Bike(Vehicle):
+class Bike(Vehicle, BikePollutionPermit):
     def __init__(self, model, year):
         self.model = model
         self.year = year
@@ -27,8 +27,7 @@ class Bike(Vehicle):
 
     def pollution_permit(self, distance):
         mileage = self.mileage_calculator(distance, self.capacity)
-        bike_pollution = BikePollutionPermit()
-        self.pollution_compliance = bike_pollution.check_permit(
+        self.pollution_compliance = self.check_permit(
             self.year, mileage)
         print(self.pollution_compliance)
 
