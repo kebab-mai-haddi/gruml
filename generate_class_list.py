@@ -64,34 +64,31 @@ for source_code in source_codes:
     source_code_data = pyclbr.readmodule(source_code)
     generate_uml = GenerateUML()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
+        if classes_covered.get(name):
+            continue
+        methods = generate_uml.show_methods(name, class_data)
+        parents = generate_uml.show_super_classes(name, class_data)
+        file_ = class_data.file
+        start_line = class_data.lineno,
+        end_line = class_data.endline
         print(
             "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
                 name,
-                generate_uml.show_methods(
-                    name, class_data
-                ),
-                generate_uml.show_super_classes(name, class_data),
-                class_data.file,
-                class_data.lineno,
-                class_data.endline
+                methods,
+                parents,
+                file_,
+                start_line,
+                end_line
             )
         )
-        print('-----------------------------------------')
-    print('=======================================')
-
-    for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-        methods = generate_uml.show_methods(name, class_data)
-        children = generate_uml.get_children(name)
-        if classes_covered.get(name):
-            continue
         agg_data.append(
             {
                 "Class": name,
                 "Methods": methods,
-                "Children": children,
-                "File": class_data.file,
-                "Start Line": class_data.lineno,
-                "End Line": class_data.endline,
+                "Parents": parents,
+                "File": file_,
+                "Start Line": start_line,
+                "End Line": end_line,
                 "Dependents": []
             }
         )
@@ -135,24 +132,26 @@ for file_ in files.keys():
 
 
 print('FINAL')
-skip_cols = 0
+skip_for_parents = 0
+skip_for_dependents = 0
 for data in agg_data:
     # if a class is dependent on this current class, a column has to be dedicated for this one.
     if data['Dependents']:
-        skip_cols += 1
-    if data['Children']:
-        skip_cols += 1
+        skip_for_dependents += 1
+    if data['Parents']:
+        skip_for_parents += 1
     print(data)
     print('========')
     print('\n')
-    print('Skip cols are: {}'.format(skip_cols))
+    print('Skip cols are: {}'.format(skip_for_parents + skip_for_dependents))
 
 # The whole data is now collected and we need to form the dataframe of it:
 
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
-df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
+df = write_in_excel.create_pandas_dataframe(
+    agg_data, skip_for_parents, skip_for_dependents)
 write_in_excel.write_df_to_excel(
-    df, 'sheet_one', skip_cols)
+    df, 'sheet_one', skip_for_parents, skip_for_dependents)
 
 '''
 print(generate_uml.class_dict)
