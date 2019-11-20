@@ -35,6 +35,8 @@ class WriteInExcel:
         dependents_col_counter = {}
         # mapping to store: {'class': {'Parents': [parent1, parent2], 'column': column_counter}}
         children_col_counter = {}
+        # parent: child mapping created just for plotting tree like line
+        parent_to_child_mapping = defaultdict(list)
         class_row_mapping = {}  # class: row number mapping
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
@@ -54,16 +56,8 @@ class WriteInExcel:
                 df.iloc[row_counter, skip_cols] = method
                 row_counter += 1
             if parents:
-                df.iloc[prev_class_row_counter, column_counter] = "←"
-                if base_class in children_col_counter:
-                    children_col_counter[base_class]['Column'] = column_counter
-                    children_col_counter[base_class]['Parents'] = parents
-                else:
-                    children_col_counter[base_class] = {
-                        'Column': column_counter,
-                        'Parents': parents
-                    }
-                column_counter -= 1
+                for parent in parents:
+                    parent_to_child_mapping[parent].append(base_class)
             for dependent in dependents:
                 df.iloc[prev_class_row_counter, skip_for_dependents] = "→"
                 self.dark_edges_column[skip_for_dependents].append(
@@ -83,14 +77,15 @@ class WriteInExcel:
                 self.dark_edges_column[column].append(
                     class_row_mapping[dependent])
 
-        for child in children_col_counter.keys():
-            column = children_col_counter[child]['Column']
-            for parent in children_col_counter[child]['Parents']:
-                df.iloc[class_row_mapping[parent], column] = "→"
-                self.inheritance_edges_column[column].append(
-                    class_row_mapping[parent])
-            self.inheritance_edges_column[column].append(
-                class_row_mapping[child])
+        for parent in parent_to_child_mapping.keys():
+            df.iloc[class_row_mapping[parent]][column_counter] = "▷"
+            for child in parent_to_child_mapping[parent]:
+                df.iloc[class_row_mapping[child]][column_counter] = "◁"
+                self.inheritance_edges_column[column_counter].append(
+                    class_row_mapping[child])
+            self.inheritance_edges_column[column_counter].append(
+                class_row_mapping[parent])
+            column_counter -= 1
 
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
@@ -112,7 +107,7 @@ class WriteInExcel:
         ws.column_dimensions['{}'.format(
             get_column_letter(skip_cols+2))].width = 22.8
         bd = Side(style='thick', color='000000')
-        bd_inheritance = Side(style='thin', color='FF0000')
+        bd_inheritance = Side(style='thick', color='FF0000')
         # to check whether a col in sheet's columns has arrived for dark edges.
         col_check_counter = 0
         for _ in ws.columns:
