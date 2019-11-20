@@ -140,9 +140,12 @@ for data in agg_data:
     # if a class is dependent on this current class, a column has to be dedicated for this one.
     if data['Dependents']:
         skip_cols += 1
+    if data['Children']:
+        skip_cols += 1
     print(data)
     print('========')
     print('\n')
+    print('Skip cols are: {}'.format(skip_cols))
 
 # The whole data is now collected and we need to form the dataframe of it:
 
