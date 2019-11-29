@@ -132,26 +132,23 @@ for file_ in files.keys():
 
 
 print('FINAL')
-skip_for_parents = 0
-skip_for_dependents = 0
+skip_cols = 0
 for data in agg_data:
     # if a class is dependent on this current class, a column has to be dedicated for this one.
-    if data['Dependents']:
-        skip_for_dependents += 1
-    if data['Parents']:
-        skip_for_parents += 1
+    if data['Dependents'] or data['Parents']:
+        skip_cols += 1
     print(data)
     print('========')
     print('\n')
-    print('Skip cols are: {}'.format(skip_for_parents + skip_for_dependents))
+    print('Skip cols are: {}'.format(skip_cols))
 
 # The whole data is now collected and we need to form the dataframe of it:
 
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
 df = write_in_excel.create_pandas_dataframe(
-    agg_data, skip_for_parents, skip_for_dependents)
+    agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
-    df, 'sheet_one', skip_for_parents, skip_for_dependents)
+    df, 'sheet_one', skip_cols)
 
 '''
 print(generate_uml.class_dict)
