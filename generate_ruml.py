@@ -5,7 +5,8 @@ from dependency_collector import ModuleUseCollector
 from generate_hierarchy import GenerateHierarchy
 from plot_uml_in_excel import WriteInExcel
 
-source_codes = ["transport", "car", "vehicles"]
+source_codes = ["source_code_to_study/transport",
+                "source_code_to_study/car", "source_code_to_study/vehicles"]
 
 # list of dicts where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
@@ -17,7 +18,8 @@ counter = 0
 classes_covered = {}
 
 for source_code in source_codes:
-    source_code_data = pyclbr.readmodule(source_code)
+    source_code = source_code.split('/')
+    source_code_data = pyclbr.readmodule(source_code[-1], source_code[0:-1])
     generate_hierarchy = GenerateHierarchy()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
         if classes_covered.get(name):
