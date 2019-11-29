@@ -19,24 +19,21 @@ class WriteInExcel:
             number_of_rows += 1 + len(class_dict['Methods'])
         return number_of_rows
 
-    def create_pandas_dataframe(self, agg_data, skip_for_parents, skip_for_dependents):
-        skip_cols = skip_for_parents + skip_for_dependents
+    def create_pandas_dataframe(self, agg_data, skip_cols):
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
         print('Number of rows in total: {}'.format(number_of_rows))
-        columns = ['' for _ in range(skip_cols)]
+        columns = ['' for _ in range(skip_cols+2)]
         df = pd.DataFrame(
             index=np.arange(0, number_of_rows),
             columns=columns+['Class']
         )
         row_counter = 0
         column_counter = skip_cols-1
-        skip_for_dependents -= 1
         # mapping to store row, col for dependents.
         dependents_col_counter = {}
-        # mapping to store: {'class': {'Parents': [parent1, parent2], 'column': column_counter}}
-        children_col_counter = {}
         # parent: child mapping created just for plotting tree like line
         parent_to_child_mapping = defaultdict(list)
+        dependee_to_dependents_mapping = defaultdict(list)
         class_row_mapping = {}  # class: row number mapping
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
@@ -47,28 +44,21 @@ class WriteInExcel:
             methods = class_data['Methods']
             parents = class_data['Parents']
             dependents = class_data['Dependents']
-            columns = ['' for _ in range(skip_cols)]
+            columns = ['' for _ in range(skip_cols+2)]
             df.loc[row_counter] = columns + [base_class]
             row_counter += 1
             for method in methods:
                 print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     method, base_class, row_counter, skip_cols+1))
-                df.iloc[row_counter, skip_cols] = method
+                df.iloc[row_counter, skip_cols+2] = method
                 row_counter += 1
             if parents:
                 for parent in parents:
                     parent_to_child_mapping[parent].append(base_class)
-            for dependent in dependents:
-                df.iloc[prev_class_row_counter, skip_for_dependents] = "→"
-                self.dark_edges_column[skip_for_dependents].append(
-                    prev_class_row_counter)
-                if dependents_col_counter.get(dependent, None):
-                    dependents_col_counter[dependent].append(
-                        skip_for_dependents)
-                else:
-                    dependents_col_counter[dependent] = [skip_for_dependents]
             if dependents:
-                skip_for_dependents -= 1
+                for dependent in dependents:
+                    dependee_to_dependents_mapping[base_class].append(
+                        dependent)
             prev_class_row_counter = row_counter
 
         for dependent in dependents_col_counter.keys():
@@ -76,15 +66,28 @@ class WriteInExcel:
                 df.iloc[class_row_mapping[dependent], column] = "←"
                 self.dark_edges_column[column].append(
                     class_row_mapping[dependent])
-
+        # get a single list of dependees and parents so as to draw a common vertical pipe
+        dependees_and_parents_combined = set()
+        for dependee in dependee_to_dependents_mapping.keys():
+            dependees_and_parents_combined.add(dependee)
         for parent in parent_to_child_mapping.keys():
-            df.iloc[class_row_mapping[parent]][column_counter] = "▷"
-            for child in parent_to_child_mapping[parent]:
-                df.iloc[class_row_mapping[child]][column_counter] = "◁"
-                self.inheritance_edges_column[column_counter].append(
-                    class_row_mapping[child])
-            self.inheritance_edges_column[column_counter].append(
-                class_row_mapping[parent])
+            dependees_and_parents_combined.add(parent)
+        for class_ in dependees_and_parents_combined:
+            df.iloc[class_row_mapping[class_]][column_counter] = "→"
+            self.dark_edges_column[column_counter].append(
+                class_row_mapping[class_])
+            if class_ in dependee_to_dependents_mapping:
+                df.iloc[class_row_mapping[class_]][skip_cols] = "→"
+                for dependent in dependee_to_dependents_mapping[class_]:
+                    df.iloc[class_row_mapping[dependent], column_counter] = "←"
+                    self.dark_edges_column[column_counter].append(
+                        class_row_mapping[dependent])
+            if class_ in parent_to_child_mapping:
+                df.iloc[class_row_mapping[class_]][skip_cols+1] = "▷"
+                for child in parent_to_child_mapping[class_]:
+                    df.iloc[class_row_mapping[child], column_counter] = "◁"
+                    self.dark_edges_column[column_counter].append(
+                        class_row_mapping[child])
             column_counter -= 1
 
         # convert all NaN to None.
@@ -93,8 +96,7 @@ class WriteInExcel:
         print(df)
         return df
 
-    def write_df_to_excel(self, df, sheet_name, skip_for_children, skip_for_dependents):
-        skip_cols = skip_for_children + skip_for_dependents
+    def write_df_to_excel(self, df, sheet_name, skip_cols):
         df.to_excel(self.writer, sheet_name=sheet_name,
                     header=True, index=False)
         self.writer.save()
@@ -123,14 +125,6 @@ class WriteInExcel:
                     print('{}{}'.format(column_letter, row_iterator+1))
                     ws['{}{}'.format(column_letter, row_iterator+1)
                        ].border = Border(left=bd)
-            if col_check_counter in self.inheritance_edges_column:
-                column_letter = get_column_letter(col_check_counter+1)
-                row_range = sorted(
-                    self.inheritance_edges_column[col_check_counter])
-                for row_iterator in range(row_range[0]+1, row_range[-1]+2):
-                    print('{}{}'.format(column_letter, row_iterator+1))
-                    ws['{}{}'.format(column_letter, row_iterator+1)
-                       ].border = Border(left=bd_inheritance)
             col_check_counter += 1
         wb.save(self.file_name)
         print("{} done!".format(sheet_name))
