@@ -1,3 +1,4 @@
+from source_code_to_study.trace_functions_called import GenerateSequenceDiagram
 import ast
 import pyclbr
 
@@ -107,3 +108,11 @@ df = write_in_excel.create_pandas_dataframe(
     agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
     df, 'sheet_one', skip_cols)
+
+# generate sequence diagram
+
+generate_sequence_diagram = GenerateSequenceDiagram('driver')
+called_functions = generate_sequence_diagram.get_called_functions('main_2')
+for filename, modulename, funcname in called_functions:
+    print('filename: {}, modulename: {}, funcname: {}'.format(
+        filename, modulename, funcname))
