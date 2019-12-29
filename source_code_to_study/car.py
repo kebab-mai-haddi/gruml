@@ -1,5 +1,5 @@
-from vehicles import Vehicle, Farzi
-from transport import CarPollutionPermit, BikePollutionPermit
+from .vehicles import Vehicle, Farzi
+from .transport import CarPollutionPermit, BikePollutionPermit
 
 
 class Car(Vehicle):

@@ -1,9 +1,10 @@
-from source_code_to_study.trace_functions_called import GenerateSequenceDiagram
 import ast
 import pyclbr
 
 from dependency_collector import ModuleUseCollector
+from driver import main_2
 from generate_hierarchy import GenerateHierarchy
+from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
 source_codes = ["source_code_to_study/transport",
@@ -104,15 +105,28 @@ for data in agg_data:
 # The whole data is now collected and we need to form the dataframe of it:
 
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
-df = write_in_excel.create_pandas_dataframe(
-    agg_data, skip_cols)
-write_in_excel.write_df_to_excel(
-    df, 'sheet_one', skip_cols)
+df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
+# write_in_excel.write_df_to_excel(
+    # df, 'sheet_one', skip_cols)
 
 # generate sequence diagram
-
 generate_sequence_diagram = GenerateSequenceDiagram('driver')
 called_functions = generate_sequence_diagram.get_called_functions('main_2')
+function_sequence = []  # consists of all functions called in sequence
 for filename, modulename, funcname in called_functions:
-    print('filename: {}, modulename: {}, funcname: {}'.format(
-        filename, modulename, funcname))
+    if funcname in ['<module>', 'main_2']:
+        continue
+    print(
+        'filename: {}, modulename: {}, funcname: {}'.format(
+            filename, modulename, funcname
+        )
+    )
+    funcname = funcname.split('.')
+    function_sequence.append((funcname[0], funcname[1]))
+
+print(function_sequence)
+
+df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
+print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
+print(df)
+write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols)

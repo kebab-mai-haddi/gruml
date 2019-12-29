@@ -1,6 +1,7 @@
 from trace import Trace
 import importlib
-from driver import *
+from driver import main_2
+
 
 class GenerateSequenceDiagram:
     def __init__(self, driver_module):
@@ -16,4 +17,7 @@ class GenerateSequenceDiagram:
         results = tracer.results()
         called_functions = results.calledfuncs
         return called_functions
-        # results.write_results()
+
+
+# ob = GenerateSequenceDiagram('driver')
+# print(ob.get_called_functions('main_2'))

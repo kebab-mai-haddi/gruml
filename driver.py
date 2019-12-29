@@ -1,6 +1,4 @@
-import car
-import transport
-import vehicles
+from source_code_to_study import car, transport, vehicles
 
 
 # def main():

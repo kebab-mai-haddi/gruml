@@ -34,13 +34,14 @@ class WriteInExcel:
         # parent: child mapping created just for plotting tree like line
         parent_to_child_mapping = defaultdict(list)
         dependee_to_dependents_mapping = defaultdict(list)
-        class_row_mapping = {}  # class: row number mapping
+        # {class: [row number, {methods: row_number}]} mapping
+        self.class_row_mapping = defaultdict(list)
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
         prev_class_row_counter = 0
         for class_data in agg_data:
             base_class = class_data['Class']
-            class_row_mapping[base_class] = row_counter
+            self.class_row_mapping[base_class] = [row_counter, {}]
             methods = class_data['Methods']
             parents = class_data['Parents']
             dependents = class_data['Dependents']
@@ -51,6 +52,8 @@ class WriteInExcel:
                 print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     method, base_class, row_counter, skip_cols+1))
                 df.iloc[row_counter, skip_cols+2] = method
+                self.class_row_mapping[base_class][1][method] = (
+                    row_counter, skip_cols+2)
                 row_counter += 1
             if parents:
                 for parent in parents:
@@ -63,9 +66,9 @@ class WriteInExcel:
 
         for dependent in dependents_col_counter.keys():
             for column in dependents_col_counter[dependent]:
-                df.iloc[class_row_mapping[dependent], column] = "←"
+                df.iloc[self.class_row_mapping[dependent][0], column] = "←"
                 self.dark_edges_column[column].append(
-                    class_row_mapping[dependent])
+                    self.class_row_mapping[dependent][0])
         # get a single list of dependees and parents so as to draw a common vertical pipe
         dependees_and_parents_combined = set()
         for dependee in dependee_to_dependents_mapping.keys():
@@ -73,26 +76,56 @@ class WriteInExcel:
         for parent in parent_to_child_mapping.keys():
             dependees_and_parents_combined.add(parent)
         for class_ in dependees_and_parents_combined:
-            df.iloc[class_row_mapping[class_]][column_counter] = "→"
+            df.iloc[self.class_row_mapping[class_][0]][column_counter] = "→"
             self.dark_edges_column[column_counter].append(
-                class_row_mapping[class_])
+                self.class_row_mapping[class_][0])
             if class_ in dependee_to_dependents_mapping:
-                df.iloc[class_row_mapping[class_]][skip_cols] = "→"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "→"
                 for dependent in dependee_to_dependents_mapping[class_]:
-                    df.iloc[class_row_mapping[dependent], column_counter] = "←"
+                    df.iloc[self.class_row_mapping[dependent]
+                            [0], column_counter] = "←"
                     self.dark_edges_column[column_counter].append(
-                        class_row_mapping[dependent])
+                        self.class_row_mapping[dependent][0])
             if class_ in parent_to_child_mapping:
-                df.iloc[class_row_mapping[class_]][skip_cols+1] = "▷"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
                 for child in parent_to_child_mapping[class_]:
-                    df.iloc[class_row_mapping[child], column_counter] = "◁"
+                    df.iloc[self.class_row_mapping[child]
+                            [0], column_counter] = "◁"
                     self.dark_edges_column[column_counter].append(
-                        class_row_mapping[child])
+                        self.class_row_mapping[child][0])
             column_counter -= 1
 
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
         print("Create DF was called.")
+        print(df)
+        return df
+
+    def integrate_sequence_diagram_in_df(self, df, function_sequence):
+        # add new columns in dataframe
+        number_of_columns_pre_sequence = len(df.columns)
+        print('number of columns before sequence: {}'.format(
+            number_of_columns_pre_sequence))
+        print("The class:row mapping is: ")
+        print(self.class_row_mapping)
+        for event_number in range(len(function_sequence)):
+            df['{}'.format(event_number)] = np.nan
+        print('Number of columns after adding empty for sequence: {}'.format(
+            len(df.columns)))
+        event_counter = 1
+        for event in function_sequence:
+            class_ = event[0]
+            function_ = event[1]
+            row_number = self.class_row_mapping[class_][1][function_][0]
+            column_number = number_of_columns_pre_sequence + event_counter - 1
+            print(
+                'Class: {}, function: {}, row_number: {}, and, column_number: {}'.format(
+                    class_, function_, row_number, column_number
+                ))
+            df.iloc[row_number, column_number] = "→"
+            event_counter += 1
+        df = df.replace(np.nan, '', regex=True)
+        print('Post sequence diagram generation in df:')
         print(df)
         return df
 
