@@ -36,6 +36,7 @@ class WriteInExcel:
         dependee_to_dependents_mapping = defaultdict(list)
         # {class: [row number, {methods: row_number}]} mapping
         self.class_row_mapping = defaultdict(list)
+        # mapping to store dark edges -> 0: [17, 10, 13] is a column: rows range.
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
         prev_class_row_counter = 0
@@ -80,17 +81,17 @@ class WriteInExcel:
             self.dark_edges_column[column_counter].append(
                 self.class_row_mapping[class_][0])
             if class_ in dependee_to_dependents_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "→"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
                 for dependent in dependee_to_dependents_mapping[class_]:
                     df.iloc[self.class_row_mapping[dependent]
-                            [0], column_counter] = "←"
+                            [0], column_counter] = "◁"
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[dependent][0])
             if class_ in parent_to_child_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "→"
                 for child in parent_to_child_mapping[class_]:
                     df.iloc[self.class_row_mapping[child]
-                            [0], column_counter] = "◁"
+                            [0], column_counter] = "←"
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[child][0])
             column_counter -= 1
@@ -113,11 +114,18 @@ class WriteInExcel:
         print('Number of columns after adding empty for sequence: {}'.format(
             len(df.columns)))
         event_counter = 1
+        # counter to check whether its the first or last column in sequence diagram section
+        counter_de_dark_edges_sequence = 0
         for event in function_sequence:
             class_ = event[0]
             function_ = event[1]
             row_number = self.class_row_mapping[class_][1][function_][0]
             column_number = number_of_columns_pre_sequence + event_counter - 1
+            if counter_de_dark_edges_sequence != 0:
+                self.dark_edges_column[column_number].append(prev_row)
+                self.dark_edges_column[column_number].append(row_number)
+            counter_de_dark_edges_sequence += 1
+            prev_row = row_number
             print(
                 'Class: {}, function: {}, row_number: {}, and, column_number: {}'.format(
                     class_, function_, row_number, column_number

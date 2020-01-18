@@ -1,14 +1,18 @@
 import ast
+import os
 import pyclbr
 
 from dependency_collector import ModuleUseCollector
-from driver import main_2
+# from driver import main_2
 from generate_hierarchy import GenerateHierarchy
 from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
-source_codes = ["source_code_to_study/transport",
-                "source_code_to_study/car", "source_code_to_study/vehicles"]
+path = ['/Users/aviralsrivastava/Desktop/source_code_to_study']
+source_code_modules = ["transport", "car", "vehicles"]
+
+# source_codes = ["simple_dep/one", "simple_dep/two"]
+
 
 # list of dicts where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
@@ -19,9 +23,8 @@ counter = 0
 # to check if a class has already been covered due to some import in another file.
 classes_covered = {}
 
-for source_code in source_codes:
-    source_code = source_code.split('/')
-    source_code_data = pyclbr.readmodule(source_code[-1], source_code[0:-1])
+for source_code_module in source_code_modules:
+    source_code_data = pyclbr.readmodule(source_code_module, path=path)
     generate_hierarchy = GenerateHierarchy()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
         if classes_covered.get(name):
@@ -106,11 +109,10 @@ for data in agg_data:
 
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
-# write_in_excel.write_df_to_excel(
-    # df, 'sheet_one', skip_cols)
+write_in_excel.write_df_to_excel(
+    df, 'sheet_one', skip_cols)
 
-# generate sequence diagram
-generate_sequence_diagram = GenerateSequenceDiagram('driver')
+generate_sequence_diagram = GenerateSequenceDiagram('/Users/aviralsrivastava/Desktop/driver.py')
 called_functions = generate_sequence_diagram.get_called_functions('main_2')
 function_sequence = []  # consists of all functions called in sequence
 for filename, modulename, funcname in called_functions:
@@ -125,7 +127,6 @@ for filename, modulename, funcname in called_functions:
     function_sequence.append((funcname[0], funcname[1]))
 
 print(function_sequence)
-
 df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
 print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
 print(df)

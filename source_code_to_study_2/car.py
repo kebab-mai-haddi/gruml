@@ -1,6 +1,5 @@
-from .vehicles import Vehicle, Farzi
-from .transport import CarPollutionPermit, BikePollutionPermit
-
+from vehicles import Vehicle, Farzi
+from transport import CarPollutionPermit, BikePollutionPermit
 
 class Car(Vehicle):
     def __init__(self, model, year=2015, capacity=30):
@@ -35,6 +34,3 @@ class Bike(Vehicle, BikePollutionPermit):
         farzi = Farzi(bike)
         print(farzi.check_farzi(bike))
 
-
-# car = Car('Indica', year=2017)
-# car.pollution_permit(30)

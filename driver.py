@@ -1,5 +1,7 @@
-from source_code_to_study import car, transport, vehicles
-
+# from .source_code_to_study import car, transport, vehicles
+import sys
+# sys.path.insert(0, '/Users/aviralsrivastava/dev/source_code_to_study')
+from source_code_to_study import car, vehicles, transport
 
 # def main():
 #     tractor_pollution_permit = transport.TractorPollutionPermit()
@@ -24,3 +26,5 @@ def main_2():
     # tractor_pollution_permit.fetch_tractor(2018, True)
     # tractor_pesticides = transport.TractorPesticides()
     # tractor_pesticides.fetch_pesticides_permit(11)
+
+# main_2()

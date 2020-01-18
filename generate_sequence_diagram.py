@@ -1,11 +1,14 @@
 from trace import Trace
 import importlib
-from driver import main_2
+# from driver import main_2
+import os
 
 
 class GenerateSequenceDiagram:
     def __init__(self, driver_module):
-        self.driver_module = __import__(driver_module)
+        # self.driver_module = __import__(driver_module)
+        print('inside init of gen seq diag, dir is: {}'.format(os.getcwd()))
+        self.driver_module = importlib.import_module(driver_module)
 
     def get_called_functions(self, driver_function):
         self.driver_function = getattr(self.driver_module, driver_function)
