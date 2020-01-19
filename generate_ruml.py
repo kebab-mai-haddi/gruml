@@ -112,15 +112,19 @@ df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
     df, 'sheet_one', skip_cols)
 
-generate_sequence_diagram = GenerateSequenceDiagram('/Users/aviralsrivastava/Desktop/driver.py')
-called_functions = generate_sequence_diagram.get_called_functions('main_2')
+generate_sequence_diagram = GenerateSequenceDiagram(
+    '/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py',
+    '/Users/aviralsrivastava/Desktop/source_code_to_study/'
+)
+called_functions = generate_sequence_diagram.get_called_functions()
 function_sequence = []  # consists of all functions called in sequence
-for filename, modulename, funcname in called_functions:
-    if funcname in ['<module>', 'main_2']:
+for called_function in called_functions:
+    modulename, funcname = called_function['modulename'], called_function['funcname']
+    if funcname in ['<module>', 'main_2']:  # soft code this function name
         continue
     print(
-        'filename: {}, modulename: {}, funcname: {}'.format(
-            filename, modulename, funcname
+        'modulename: {}, funcname: {}'.format(
+            modulename, funcname
         )
     )
     funcname = funcname.split('.')

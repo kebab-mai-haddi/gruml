@@ -1,0 +1,29 @@
+       # from .source_code_to_study import car, transport, vehicles
+    1: import sys
+       # sys.path.insert(0, '/Users/aviralsrivastava/dev/source_code_to_study')
+    1: import car, vehicles, transport
+       
+       # def main():
+       #     tractor_pollution_permit = transport.TractorPollutionPermit()
+       #     tractor_pollution_permit.fetch_tractor(2018, True)
+       #     tractor_pesticides = transport.TractorPesticides()
+       #     tractor_pesticides.fetch_pesticides_permit(11)
+       #     car_ = car.Car(model='Tesla')
+       #     car_.pollution_permit(20000)
+       #     bike = car.Bike('Harley', 2019)
+       #     bike.pollution_permit(200000)
+       #     bike.check_farzi()
+       
+    1: def main_2():
+    1:     print('Inside main_2 func')
+    1:     car_ = car.Car(model='Tesla')
+    1:     car_.pollution_permit(20000)
+    1:     bike = car.Bike('Harley', 2019)
+    1:     bike.pollution_permit(200000)
+    1:     bike.check_farzi()
+           # tractor_pollution_permit = transport.TractorPollutionPermit()
+           # tractor_pollution_permit.fetch_tractor(2018, True)
+           # tractor_pesticides = transport.TractorPesticides()
+           # tractor_pesticides.fetch_pesticides_permit(11)
+       
+    1: main_2()
