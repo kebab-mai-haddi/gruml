@@ -78,7 +78,7 @@ class WriteInExcel:
         for parent in parent_to_child_mapping.keys():
             dependees_and_parents_combined.add(parent)
         for class_ in dependees_and_parents_combined:
-            df.iloc[self.class_row_mapping[class_][0]][column_counter] = "→"
+            df.iloc[self.class_row_mapping[class_][0]][column_counter] = "⇒"
             self.dark_edges_column[column_counter].append(
                 self.class_row_mapping[class_][0])
             if class_ in dependee_to_dependents_mapping:
@@ -89,7 +89,7 @@ class WriteInExcel:
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[dependent][0])
             if class_ in parent_to_child_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "→"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "⇒"
                 for child in parent_to_child_mapping[class_]:
                     df.iloc[self.class_row_mapping[child]
                             [0], column_counter] = "←"
