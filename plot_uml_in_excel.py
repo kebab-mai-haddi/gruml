@@ -12,6 +12,7 @@ class WriteInExcel:
     def __init__(self, file_name='UML_Spreadsheet.xlsx'):
         self.file_name = file_name
         self.writer = pd.ExcelWriter(self.file_name, engine='xlsxwriter')
+        self.count = 0
 
     def get_number_of_rows_in_df(self, agg_data):
         number_of_rows = 0
@@ -138,10 +139,15 @@ class WriteInExcel:
         return df
 
     def write_df_to_excel(self, df, sheet_name, skip_cols):
+        self.count += 1
+        if self.count == 2:
+            self.file_name = 'Seq_Diag_' + self.file_name
+            self.writer = pd.ExcelWriter(self.file_name, engine='xlsxwriter')
         df.to_excel(self.writer, sheet_name=sheet_name,
                     header=True, index=False)
         self.writer.save()
         self.writer.close()
+        import sys
         wb = load_workbook(filename=self.file_name)
         ws = wb[sheet_name]
         ws.column_dimensions['{}'.format(get_column_letter(
@@ -168,4 +174,4 @@ class WriteInExcel:
                        ].border = Border(left=bd)
             col_check_counter += 1
         wb.save(self.file_name)
-        print("{} done!".format(sheet_name))
+        print("{}:{} done!".format(self.file_name, sheet_name))

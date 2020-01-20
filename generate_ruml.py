@@ -1,6 +1,10 @@
+import pandas as pd
+from trace import Trace
+import importlib
 import ast
 import os
 import pyclbr
+import sys
 
 from dependency_collector import ModuleUseCollector
 # from driver import main_2
@@ -114,24 +118,43 @@ write_in_excel.write_df_to_excel(
 
 generate_sequence_diagram = GenerateSequenceDiagram(
     '/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py',
+    'driver',
     '/Users/aviralsrivastava/Desktop/source_code_to_study/'
 )
-called_functions = generate_sequence_diagram.get_called_functions()
+spec = importlib.util.spec_from_file_location(
+    "driver", "/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py")
+foo = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(foo)
+# foo.main_2()
+tracer = Trace(countfuncs=1, )
+tracer.run('foo.main_2()')
+results = tracer.results()
+print('results of tracer are: ')
+print(results)
+called_functions = results.calledfuncs
+# called_functions = generate_sequence_diagram.get_called_functions('main_2')
 function_sequence = []  # consists of all functions called in sequence
-for called_function in called_functions:
-    modulename, funcname = called_function['modulename'], called_function['funcname']
-    if funcname in ['<module>', 'main_2']:  # soft code this function name
+for filename, modulename, funcname in called_functions:
+    if funcname in ['<module>', 'main_2']:
         continue
     print(
-        'modulename: {}, funcname: {}'.format(
-            modulename, funcname
+        'filename: {}, modulename: {}, funcname: {}'.format(
+            filename, modulename, funcname
         )
     )
     funcname = funcname.split('.')
     function_sequence.append((funcname[0], funcname[1]))
 
+
 print(function_sequence)
 df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
 print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
 print(df)
+
+# writer = pd.ExcelWriter('testing_sheet.xlsx', engine='xlsxwriter')
+# df.to_excel(writer, sheet_name='testing_1', header=True, index=False)
+# writer.save()
+# writer.close()
+# print('wrote pure df to excel sheet named {}'.format('testing_sheet.xlsx'))
+# sys.exit()
 write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols)
