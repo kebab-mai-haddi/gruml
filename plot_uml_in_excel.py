@@ -37,7 +37,7 @@ class WriteInExcel:
         dependee_to_dependents_mapping = defaultdict(list)
         # {class: [row number, {methods: row_number}]} mapping
         self.class_row_mapping = defaultdict(list)
-        # mapping to store dark edges -> 0: [17, 10, 13] is a column: rows range.
+        # mapping to store dark edges -> 0: [17, 10, 13] is a COLUMN:ROWS range.
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
         prev_class_row_counter = 0
@@ -118,22 +118,29 @@ class WriteInExcel:
             len(df.columns)))
         event_counter = 1
         # counter to check whether its the first or last column in sequence diagram section
-        counter_de_dark_edges_sequence = 0
         for event in function_sequence:
-            class_ = event[0]
-            function_ = event[1]
-            row_number = self.class_row_mapping[class_][1][function_][0]
-            column_number = number_of_columns_pre_sequence + event_counter - 1
-            if counter_de_dark_edges_sequence != 0:
-                self.dark_edges_column[column_number].append(prev_row)
-                self.dark_edges_column[column_number].append(row_number)
-            counter_de_dark_edges_sequence += 1
-            prev_row = row_number
-            print(
-                'Class: {}, function: {}, row_number: {}, and, column_number: {}'.format(
-                    class_, function_, row_number, column_number
-                ))
-            df.iloc[row_number, column_number] = "→"
+            print('event is: {}'.format(event))
+            caller, callee = event
+            caller_class, caller_function = caller.split('.')
+            callee_class, callee_function = callee.split('.')
+            print("Caller class is {} and class_row_mapping is {}".format(
+                caller_class, self.class_row_mapping))
+            caller_row_number, caller_column_number = self.class_row_mapping[
+                caller_class][1][caller_function]
+            callee_row_number, callee_column_number = self.class_row_mapping[
+                callee_class][1][callee_function]
+            caller_column_number, callee_column_number = number_of_columns_pre_sequence + \
+                event_counter - 1, number_of_columns_pre_sequence + event_counter - 1
+            self.dark_edges_column[caller_column_number].extend(
+                [caller_row_number, callee_row_number])
+            if df.iloc[caller_row_number, caller_column_number] == "←":
+                df.iloc[caller_row_number, caller_column_number] = "↔"
+            else:
+                df.iloc[caller_row_number, caller_column_number] = "→"
+            if df.iloc[callee_row_number, callee_column_number] == "→":
+                df.iloc[callee_row_number, callee_column_number] = "↔"
+            else:
+                df.iloc[callee_row_number, callee_column_number] = "←"
             event_counter += 1
         df = df.replace(np.nan, '', regex=True)
         print('Post sequence diagram generation in df:')
@@ -158,11 +165,12 @@ class WriteInExcel:
         ws.column_dimensions['{}'.format(
             get_column_letter(skip_cols+2))].width = 22.8
         bd = Side(style='thick', color='000000')
-        bd_inheritance = Side(style='thick', color='FF0000')
         # to check whether a col in sheet's columns has arrived for dark edges.
         col_check_counter = 0
+        print('Skip columns are: {}'.format(skip_cols))
         for _ in ws.columns:
             if col_check_counter in self.dark_edges_column:
+                print('Col {} is in dark edges column'.format(col_check_counter))
                 column_letter = get_column_letter(col_check_counter+1)
                 row_range = sorted(self.dark_edges_column[col_check_counter])
                 # plus one because dataframe's 0 is excel'1 but column headings are on 1 so we need to start from 2.
@@ -172,8 +180,12 @@ class WriteInExcel:
                 # get the first and last row to draw the dark edges.
                 for row_iterator in range(row_range[0]+1, row_range[-1]+2):
                     print('{}{}'.format(column_letter, row_iterator+1))
-                    ws['{}{}'.format(column_letter, row_iterator+1)
-                       ].border = Border(left=bd)
+                    if col_check_counter >= skip_cols:  # should it be > or >=
+                        ws['{}{}'.format(column_letter, row_iterator+1)
+                           ].border = Border(right=bd)
+                    else:
+                        ws['{}{}'.format(column_letter, row_iterator+1)
+                           ].border = Border(left=bd)
             col_check_counter += 1
         wb.save(self.file_name)
         print("{}:{} done!".format(self.file_name, sheet_name))
