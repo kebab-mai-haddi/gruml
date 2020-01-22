@@ -78,6 +78,8 @@ class WriteInExcel:
         for parent in parent_to_child_mapping.keys():
             dependees_and_parents_combined.add(parent)
         for class_ in dependees_and_parents_combined:
+            if not self.class_row_mapping.get(class_, None):
+                continue
             df.iloc[self.class_row_mapping[class_][0]][column_counter] = "⇒"
             self.dark_edges_column[column_counter].append(
                 self.class_row_mapping[class_][0])
