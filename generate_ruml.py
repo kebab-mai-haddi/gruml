@@ -126,27 +126,25 @@ spec = importlib.util.spec_from_file_location(
 foo = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(foo)
 # foo.main_2()
-tracer = Trace(countfuncs=1, )
+tracer = Trace(countfuncs=1, countcallers=1, timing=1)
 tracer.run('foo.main_2()')
 results = tracer.results()
 print('results of tracer are: ')
 print(results)
-called_functions = results.calledfuncs
+caller_functions = results.callers
 # called_functions = generate_sequence_diagram.get_called_functions('main_2')
 function_sequence = []  # consists of all functions called in sequence
-for filename, modulename, funcname in called_functions:
-    if funcname in ['<module>', 'main_2']:
+for caller, callee in caller_functions:
+    caller_file, caller_module, caller_function = caller
+    callee_file, callee_module, callee_function = callee
+    if caller_module not in source_code_modules:
         continue
-    print(
-        'filename: {}, modulename: {}, funcname: {}'.format(
-            filename, modulename, funcname
-        )
-    )
-    funcname = funcname.split('.')
-    function_sequence.append((funcname[0], funcname[1]))
+    function_sequence.append([caller_function, callee_function])
 
+print('Function sequence: ')
+for sequence in function_sequence:
+    print(sequence)
 
-print(function_sequence)
 df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
 print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
 print(df)
