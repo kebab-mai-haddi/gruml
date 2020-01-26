@@ -3,13 +3,18 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Border, Side
+from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 
 class WriteInExcel:
 
     def __init__(self, file_name='UML_Spreadsheet.xlsx'):
+        """[summary]
+        
+        Keyword Arguments:
+            file_name {str} -- [description] (default: {'UML_Spreadsheet.xlsx'})
+        """
         self.file_name = file_name
         self.writer = pd.ExcelWriter(self.file_name, engine='xlsxwriter')
         self.count = 0
@@ -187,5 +192,54 @@ class WriteInExcel:
                         ws['{}{}'.format(column_letter, row_iterator+1)
                            ].border = Border(left=bd)
             col_check_counter += 1
+
+        red_fill = PatternFill(
+            start_color='FFFF0000',
+            end_color='FFFF0000',
+            fill_type='solid'
+        )
+        for row in range(1, ws.max_row+1):
+            column_letter = get_column_letter(skip_cols+1)
+            if ws['{}{}'.format(column_letter, row)].value:
+                ws['{}{}'.format(column_letter, row)].fill = red_fill
+            column_letter = get_column_letter(skip_cols+2)
+            if ws['{}{}'.format(column_letter, row)].value:
+                ws['{}{}'.format(column_letter, row)].fill = red_fill
         wb.save(self.file_name)
         print("{}:{} done!".format(self.file_name, sheet_name))
+
+        # red color
+        # import xlsxwriter
+        # import os
+        # writer = pd.ExcelWriter(self.file_name, engine='openpyxl', mode='a')
+        # workbook = writer.book
+        # inheritance_cell_format = workbook.add_format()
+        # inheritance_cell_format.set_font_color('red')
+        # print(writer.sheets)
+        # worksheet = writer.sh['Sheet']
+        # worksheet.conditional_format(
+        #     0,
+        #     skip_cols-2,
+        #     ws.max_row,
+        #     skip_cols-1,
+        #     {
+        #         'type': 'cell',
+        #         'criteria': 'containing',
+        #         'value': '⇒',
+        #         'format': inheritance_cell_format
+        #     }
+        # )
+        # worksheet.conditional_format(
+        #     0,
+        #     skip_cols-2,
+        #     ws.max_row,
+        #     skip_cols-1,
+        #     {
+        #         'type': 'cell',
+        #         'criteria': 'containing',
+        #         'value': '→',
+        #         'format': inheritance_cell_format
+        #     }
+        # )
+        # writer.save()
+        # print('red color added')
