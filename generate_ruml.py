@@ -1,19 +1,26 @@
-import pandas as pd
-from trace import Trace
-import importlib
 import ast
+import importlib
 import os
 import pyclbr
 import sys
+from trace import Trace
+
+import pandas as pd
 
 from dependency_collector import ModuleUseCollector
-# from driver import main_2
 from generate_hierarchy import GenerateHierarchy
 from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
-path = ['/Users/aviralsrivastava/Desktop/source_code_to_study']
-source_code_modules = ["transport", "car", "vehicles"]
+arguments = sys.argv
+# 0 is the python3 file name python3 arg0 arg1 ...
+source_code_path = [arguments[1]]
+# fetch all the modules
+source_code_modules = []
+for file_ in os.listdir(source_code_path[0]):
+    if file_.endswith(".py") and not file_.startswith('driver'):
+        source_code_modules.append(file_.split('.py')[0])
+print(source_code_modules)
 
 # source_codes = ["simple_dep/one", "simple_dep/two"]
 
@@ -28,7 +35,8 @@ counter = 0
 classes_covered = {}
 
 for source_code_module in source_code_modules:
-    source_code_data = pyclbr.readmodule(source_code_module, path=path)
+    source_code_data = pyclbr.readmodule(
+        source_code_module, path=source_code_path)
     generate_hierarchy = GenerateHierarchy()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
         if classes_covered.get(name):
@@ -116,23 +124,23 @@ df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
     df, 'sheet_one', skip_cols)
 
+driver_path = arguments[2]
+driver_name = arguments[3]
 generate_sequence_diagram = GenerateSequenceDiagram(
-    '/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py',
-    'driver',
-    '/Users/aviralsrivastava/Desktop/source_code_to_study/'
+    driver_path,
+    driver_name,
+    source_code_path[0]
 )
 spec = importlib.util.spec_from_file_location(
-    "driver", "/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py")
+    driver_name, driver_path)
 foo = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(foo)
-# foo.main_2()
 tracer = Trace(countfuncs=1, countcallers=1, timing=1)
 tracer.run('foo.main_2()')
 results = tracer.results()
 print('results of tracer are: ')
 print(results)
 caller_functions = results.callers
-# called_functions = generate_sequence_diagram.get_called_functions('main_2')
 function_sequence = []  # consists of all functions called in sequence
 for caller, callee in caller_functions:
     caller_file, caller_module, caller_function = caller
