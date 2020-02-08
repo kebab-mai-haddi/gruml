@@ -1,12 +1,29 @@
 import ast
+import importlib
+import os
 import pyclbr
+import sys
+from trace import Trace
+
+import pandas as pd
 
 from dependency_collector import ModuleUseCollector
 from generate_hierarchy import GenerateHierarchy
+from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
-source_codes = ["source_code_to_study/transport",
-                "source_code_to_study/car", "source_code_to_study/vehicles"]
+arguments = sys.argv
+# 0 is the python3 file name python3 arg0 arg1 ...
+source_code_path = [arguments[1]]
+# fetch all the modules
+source_code_modules = []
+for file_ in os.listdir(source_code_path[0]):
+    if file_.endswith(".py") and not file_.startswith('driver'):
+        source_code_modules.append(file_.split('.py')[0])
+print(source_code_modules)
+
+# source_codes = ["simple_dep/one", "simple_dep/two"]
+
 
 # list of dicts where each dict is: {"name": <>, "methods": [], "children": []}
 agg_data = []
@@ -17,9 +34,9 @@ counter = 0
 # to check if a class has already been covered due to some import in another file.
 classes_covered = {}
 
-for source_code in source_codes:
-    source_code = source_code.split('/')
-    source_code_data = pyclbr.readmodule(source_code[-1], source_code[0:-1])
+for source_code_module in source_code_modules:
+    source_code_data = pyclbr.readmodule(
+        source_code_module, path=source_code_path)
     generate_hierarchy = GenerateHierarchy()
     for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
         if classes_covered.get(name):
@@ -103,7 +120,41 @@ for data in agg_data:
 # The whole data is now collected and we need to form the dataframe of it:
 
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
-df = write_in_excel.create_pandas_dataframe(
-    agg_data, skip_cols)
+df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
     df, 'sheet_one', skip_cols)
+
+driver_path = arguments[2]
+driver_name = arguments[3]
+generate_sequence_diagram = GenerateSequenceDiagram(
+    driver_path,
+    driver_name,
+    source_code_path[0]
+)
+spec = importlib.util.spec_from_file_location(
+    driver_name, driver_path)
+foo = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(foo)
+tracer = Trace(countfuncs=1, countcallers=1, timing=1)
+tracer.run('foo.main_2()')
+results = tracer.results()
+print('results of tracer are: ')
+print(results)
+caller_functions = results.callers
+function_sequence = []  # consists of all functions called in sequence
+for caller, callee in caller_functions:
+    caller_file, caller_module, caller_function = caller
+    callee_file, callee_module, callee_function = callee
+    if caller_module not in source_code_modules:
+        continue
+    function_sequence.append([caller_function, callee_function])
+
+print('Function sequence: ')
+for sequence in function_sequence:
+    print(sequence)
+
+df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
+print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
+print(df)
+
+write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols)
