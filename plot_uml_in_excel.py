@@ -11,7 +11,7 @@ class WriteInExcel:
 
     def __init__(self, file_name='UML_Spreadsheet.xlsx'):
         """[summary]
-        
+
         Keyword Arguments:
             file_name {str} -- [description] (default: {'UML_Spreadsheet.xlsx'})
         """
@@ -89,17 +89,17 @@ class WriteInExcel:
             self.dark_edges_column[column_counter].append(
                 self.class_row_mapping[class_][0])
             if class_ in dependee_to_dependents_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "⇒"
                 for dependent in dependee_to_dependents_mapping[class_]:
                     df.iloc[self.class_row_mapping[dependent]
-                            [0], column_counter] = "◁"
+                            [0], column_counter] = "←"
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[dependent][0])
             if class_ in parent_to_child_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "⇒"
+                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
                 for child in parent_to_child_mapping[class_]:
                     df.iloc[self.class_row_mapping[child]
-                            [0], column_counter] = "←"
+                            [0], column_counter] = "◁"
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[child][0])
             column_counter -= 1
@@ -207,39 +207,3 @@ class WriteInExcel:
                 ws['{}{}'.format(column_letter, row)].fill = red_fill
         wb.save(self.file_name)
         print("{}:{} done!".format(self.file_name, sheet_name))
-
-        # red color
-        # import xlsxwriter
-        # import os
-        # writer = pd.ExcelWriter(self.file_name, engine='openpyxl', mode='a')
-        # workbook = writer.book
-        # inheritance_cell_format = workbook.add_format()
-        # inheritance_cell_format.set_font_color('red')
-        # print(writer.sheets)
-        # worksheet = writer.sh['Sheet']
-        # worksheet.conditional_format(
-        #     0,
-        #     skip_cols-2,
-        #     ws.max_row,
-        #     skip_cols-1,
-        #     {
-        #         'type': 'cell',
-        #         'criteria': 'containing',
-        #         'value': '⇒',
-        #         'format': inheritance_cell_format
-        #     }
-        # )
-        # worksheet.conditional_format(
-        #     0,
-        #     skip_cols-2,
-        #     ws.max_row,
-        #     skip_cols-1,
-        #     {
-        #         'type': 'cell',
-        #         'criteria': 'containing',
-        #         'value': '→',
-        #         'format': inheritance_cell_format
-        #     }
-        # )
-        # writer.save()
-        # print('red color added')
