@@ -110,7 +110,7 @@ class WriteInExcel:
         print(df)
         return df
 
-    def integrate_sequence_diagram_in_df(self, df, function_sequence):
+    def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case):
         # add new columns in dataframe
         number_of_columns_pre_sequence = len(df.columns)
         print('number of columns before sequence: {}'.format(
@@ -152,10 +152,10 @@ class WriteInExcel:
         print(df)
         return df
 
-    def write_df_to_excel(self, df, sheet_name, skip_cols):
+    def write_df_to_excel(self, df, sheet_name, skip_cols, use_case=None):
         self.count += 1
         if self.count == 2:
-            self.file_name = 'Seq_Diag_' + self.file_name
+            self.file_name = 'Use_Case_{}'.format(use_case) + self.file_name
             self.writer = pd.ExcelWriter(self.file_name, engine='xlsxwriter')
         df.to_excel(self.writer, sheet_name=sheet_name,
                     header=True, index=False)
@@ -205,5 +205,21 @@ class WriteInExcel:
             column_letter = get_column_letter(skip_cols+2)
             if ws['{}{}'.format(column_letter, row)].value:
                 ws['{}{}'.format(column_letter, row)].fill = red_fill
+        # add a new row in the worksheet
+        if use_case:
+            ws.insert_rows(0)
+            use_case_column_letter = get_column_letter(skip_cols+4)
+            use_case_cell = '{}{}'.format(use_case_column_letter, 1)
+            print("Use Case cell is {}".format(use_case_cell))
+            ws[use_case_cell] = use_case
+        # adjust the width of all columns
+            col_counter = 1
+            for _ in ws.columns:
+                if col_counter == skip_cols+3:
+                    ws.column_dimensions[get_column_letter(col_counter)].width = 36    
+                    col_counter += 1
+                    continue
+                ws.column_dimensions[get_column_letter(col_counter)].width = 3
+                col_counter += 1
         wb.save(self.file_name)
         print("{}:{} done!".format(self.file_name, sheet_name))

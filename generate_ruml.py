@@ -12,17 +12,37 @@ from generate_hierarchy import GenerateHierarchy
 from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
-arguments = sys.argv
-# 0 is the python3 file name python3 arg0 arg1 ...
-source_code_path = [arguments[1]]
-# fetch all the modules
+source_code_path = []
 source_code_modules = []
-for file_ in os.listdir(source_code_path[0]):
-    if file_.endswith(".py") and not file_.startswith('driver'):
-        source_code_modules.append(file_.split('.py')[0])
-print(source_code_modules)
+driver_path = None
+driver_name = None
 
-# source_codes = ["simple_dep/one", "simple_dep/two"]
+
+def get_source_code_path_and_modules():
+    global source_code_path, source_code_modules, driver_path, driver_name
+    arguments = sys.argv
+    source_code_path = [arguments[1]]
+    # fetch all the modules
+    for file_ in os.listdir(source_code_path[0]):
+        if file_.endswith(".py") and not file_.startswith('driver'):
+            source_code_modules.append(file_.split('.py')[0])
+    print(source_code_modules)
+
+
+get_source_code_path_and_modules()
+
+
+def get_driver_path_and_driver_name():
+    use_case = input(
+        'Please enter the use case or press Ctrl-c to exit the program: \n'
+    )
+    driver_path = input(
+        'Please enter the driver path: \n'
+    )
+    driver_name = input(
+        'Please enter the driver name: \n'
+    )
+    return use_case, driver_path, driver_name
 
 
 # list of dicts where each dict is: {"name": <>, "methods": [], "children": []}
@@ -45,7 +65,7 @@ for source_code_module in source_code_modules:
         parents = generate_hierarchy.show_super_classes(name, class_data)
         file_ = class_data.file
         start_line = class_data.lineno,
-        end_line = class_data.endline
+        end_line = class_data.end_lineno
         print(
             "Class: {}, Methods: {}, Parent(s): {}, File: {}, Start line: {}, End line: {}".format(
                 name,
@@ -72,7 +92,7 @@ for source_code_module in source_code_modules:
                 {
                     'class': name,
                     'start_line': class_data.lineno,
-                    'end_line': class_data.endline
+                    'end_line': class_data.end_lineno
                 }
             )
         else:
@@ -80,7 +100,7 @@ for source_code_module in source_code_modules:
                 {
                     'class': name,
                     'start_line': class_data.lineno,
-                    'end_line': class_data.endline
+                    'end_line': class_data.end_lineno
                 }
             ]
         class_index[name] = counter
@@ -124,8 +144,8 @@ df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
     df, 'sheet_one', skip_cols)
 
-driver_path = arguments[2]
-driver_name = arguments[3]
+# generating sequence diagram for a use-case
+use_case, driver_path, driver_name = get_driver_path_and_driver_name()
 generate_sequence_diagram = GenerateSequenceDiagram(
     driver_path,
     driver_name,
@@ -153,8 +173,9 @@ print('Function sequence: ')
 for sequence in function_sequence:
     print(sequence)
 
-df = write_in_excel.integrate_sequence_diagram_in_df(df, function_sequence)
+df = write_in_excel.integrate_sequence_diagram_in_df(
+    df, function_sequence, use_case)
 print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
 print(df)
 
-write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols)
+write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols, use_case)
