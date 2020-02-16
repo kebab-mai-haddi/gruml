@@ -20,8 +20,7 @@ driver_name = None
 
 def get_source_code_path_and_modules():
     global source_code_path, source_code_modules, driver_path, driver_name
-    arguments = sys.argv
-    source_code_path = [arguments[1]]
+    source_code_path = [input('Please enter the source code path \n')]
     # fetch all the modules
     for file_ in os.listdir(source_code_path[0]):
         if file_.endswith(".py") and not file_.startswith('driver'):
@@ -142,7 +141,7 @@ for data in agg_data:
 write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
 df = write_in_excel.create_pandas_dataframe(agg_data, skip_cols)
 write_in_excel.write_df_to_excel(
-    df, 'sheet_one', skip_cols)
+    df, 'sheet_one', skip_cols, classes_covered)
 
 # generating sequence diagram for a use-case
 use_case, driver_path, driver_name = get_driver_path_and_driver_name()
@@ -178,4 +177,6 @@ df = write_in_excel.integrate_sequence_diagram_in_df(
 print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
 print(df)
 
-write_in_excel.write_df_to_excel(df, 'sheet_one', skip_cols, use_case)
+print("Calling 2nd time, use case {}".format(use_case))
+write_in_excel.write_df_to_excel(
+    df, 'sheet_one', skip_cols, classes_covered, use_case)

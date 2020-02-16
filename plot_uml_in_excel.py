@@ -152,7 +152,8 @@ class WriteInExcel:
         print(df)
         return df
 
-    def write_df_to_excel(self, df, sheet_name, skip_cols, use_case=None):
+    def write_df_to_excel(self, df, sheet_name, skip_cols, classes={}, use_case=None):
+        print("Use Case as an argument is: {}".format(use_case))
         self.count += 1
         if self.count == 2:
             self.file_name = 'Use_Case_{}'.format(use_case) + self.file_name
@@ -207,19 +208,27 @@ class WriteInExcel:
                 ws['{}{}'.format(column_letter, row)].fill = red_fill
         # add a new row in the worksheet
         if use_case:
+            print("Working for the Use Case: {}".format(use_case))
             ws.insert_rows(0)
             use_case_column_letter = get_column_letter(skip_cols+4)
             use_case_cell = '{}{}'.format(use_case_column_letter, 1)
             print("Use Case cell is {}".format(use_case_cell))
             ws[use_case_cell] = use_case
-        # adjust the width of all columns
-            col_counter = 1
-            for _ in ws.columns:
-                if col_counter == skip_cols+3:
-                    ws.column_dimensions[get_column_letter(col_counter)].width = 36    
-                    col_counter += 1
-                    continue
-                ws.column_dimensions[get_column_letter(col_counter)].width = 3
+            # adjust the width of all columns
+        col_counter = 1
+        for _ in ws.columns:
+            if col_counter == skip_cols+3:
+                ws.column_dimensions[get_column_letter(col_counter)].width = 36
                 col_counter += 1
+                continue
+            ws.column_dimensions[get_column_letter(col_counter)].width = 3
+            col_counter += 1
+        # give bold font to cells with Classes
+        classes_column = get_column_letter(skip_cols+3)
+        font = Font(bold=True)
+        for row in range(1, ws.max_row+1):
+            if ws['{}{}'.format(classes_column, row)].value:
+                if ws['{}{}'.format(classes_column, row)].value in classes:
+                    ws['{}{}'.format(classes_column, row)].font = font
         wb.save(self.file_name)
         print("{}:{} done!".format(self.file_name, sheet_name))
