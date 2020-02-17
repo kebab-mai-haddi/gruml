@@ -14,13 +14,15 @@ from plot_uml_in_excel import WriteInExcel
 
 foo = None
 
+
 class GRUML:
 
-    def __init__(self):
+    def __init__(self, test=False):
         self.source_code_path = []
         self.source_code_modules = []
         self.driver_path = None
         self.driver_name = None
+        self.test = test
 
     def get_source_code_path_and_modules(self):
         self.source_code_path = [input('Please enter the source code path \n')]
@@ -39,7 +41,10 @@ class GRUML:
         driver_name = input(
             'Please enter the driver name: \n'
         )
-        return use_case, driver_path, driver_name
+        driver_function = input(
+            'Please enter the driver function name: \n'
+        )
+        return use_case, driver_path, driver_name, driver_function
 
     def generate_dependency_data(self):
         agg_data = []
@@ -81,17 +86,20 @@ class GRUML:
         for file_ in files.keys():
             module = file_.split('/')[-1].split('.py')[0]
             for j in files.keys():
-                source = open(j).read()
-                collector = ModuleUseCollector(module)
-                collector.visit(ast.parse(source))
-                for use_ in collector.used_at:
-                    _class = use_[0].split(".")[-1]
-                    alias = use_[1]
-                    line_no = use_[2]
-                    for class_ in files[j]:
-                        if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
-                            agg_data[class_index[_class]]['Dependents'].append(class_[
-                                                                               'class'])
+                try:
+                    source = open(j).read()
+                    collector = ModuleUseCollector(module)
+                    collector.visit(ast.parse(source))
+                    for use_ in collector.used_at:
+                        _class = use_[0].split(".")[-1]
+                        alias = use_[1]
+                        line_no = use_[2]
+                        for class_ in files[j]:
+                            if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
+                                agg_data[class_index[_class]]['Dependents'].append(class_[
+                                    'class'])
+                except AttributeError:
+                    pass
         self.skip_cols = 0
         for data in agg_data:
             # if a class is dependent on this current class, a column has to be dedicated for this one.
@@ -110,7 +118,7 @@ class GRUML:
 
     def generate_sequential_function_calls(self):
         # generating sequence diagram for a use-case
-        use_case, driver_path, driver_name = self.get_driver_path_and_driver_name()
+        use_case, driver_path, driver_name, driver_function = self.get_driver_path_and_driver_name()
         generate_sequence_diagram = GenerateSequenceDiagram(
             driver_path, driver_name, self.source_code_path[0])
         spec = importlib.util.spec_from_file_location(driver_name, driver_path)
@@ -118,7 +126,7 @@ class GRUML:
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
         tracer = Trace(countfuncs=1, countcallers=1, timing=1)
-        tracer.run('foo.main_2()')
+        tracer.run('foo.{}()'.format(driver_function))
         results = tracer.results()
         print('results of tracer are: ')
         print(results)
@@ -142,8 +150,11 @@ class GRUML:
             self.df, 'sheet_one', self.skip_cols, self.classes_covered, use_case)
 
 
-if __name__ == '__main__':
+def main():
     gruml = GRUML()
     gruml.get_source_code_path_and_modules()
     gruml.generate_dependency_data()
     gruml.generate_sequential_function_calls()
+
+
+main()
