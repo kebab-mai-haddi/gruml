@@ -26,9 +26,15 @@ class GRUML:
 
     def get_source_code_path_and_modules(self):
         self.source_code_path = [input('Please enter the source code path \n')]
-        for file_ in os.listdir(self.source_code_path[0]):
-            if file_.endswith(".py") and not file_.startswith('driver'):
-                self.source_code_modules.append(file_.split('.py')[0])
+        for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
+            for file in filenames:
+                if file.endswith(".py"):
+                    rel_dir = os.path.relpath(
+                        dirpath, self.source_code_path[0])
+                    file = os.path.join(rel_dir, file) if rel_dir != '.' else file
+                    file = file.split(".py")[0]
+                    self.source_code_modules += [file]
+        print("Will be checking the following modules: ")
         print(self.source_code_modules)
 
     def get_driver_path_and_driver_name(self):
