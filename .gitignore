@@ -3,3 +3,4 @@ __pycache__/
 *.xdot
 env_list_classes/
 __pycache__
+*.xlsx
