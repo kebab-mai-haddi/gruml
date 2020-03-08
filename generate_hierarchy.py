@@ -11,7 +11,7 @@ class GenerateHierarchy:
         self.class_dict = {}  # it will have a class:children mapping.
 
     def show_class(self, name, class_data):
-        print(class_data)
+        # print(class_data)
         self.class_dict[name] = []
         self.show_super_classes(name, class_data)
 
