@@ -144,17 +144,19 @@ class GRUML:
                         )
                     )
         self.skip_cols = 0
-        dependents = 0
+        parents_set = set()
+        dependees_set = set()
         for data in agg_data:
-            # if a class is dependent on this current class, a column has to be dedicated for this one.
-            if data['Dependents'] or data['Parents']:
-                dependents += 1 if data['Dependents'] else dependents
-                self.skip_cols += 1
+            if data['Dependents']:
+                dependees_set.add(data['Class'])
+            if data['Parents']:
+                for parent in data['Parents']:
+                    parents_set.add(parent)
+        self.skip_cols = len(parents_set) + len(dependees_set)
         #     print(data)
         #     print('========')
         #     print('\n')
-            print('Skip cols are: {} and dependents are {}'.format(
-                self.skip_cols, dependents))
+        print('Skip cols are: {}'.format(self.skip_cols))
         # print('The whole data set is: ')
         # for element in agg_data:
         #     print(element)
