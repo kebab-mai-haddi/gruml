@@ -25,7 +25,7 @@ class WriteInExcel:
             number_of_rows += 1 + len(class_dict['Methods'])
         return number_of_rows
 
-    def create_pandas_dataframe(self, agg_data, skip_cols):
+    def create_pandas_dataframe(self, agg_data, skip_cols, object):
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
         print('Number of rows in total: {}'.format(number_of_rows))
         columns = ['' for _ in range(skip_cols+2)]
@@ -108,6 +108,15 @@ class WriteInExcel:
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[child][0])
             column_counter -= 1
+        # checking whether the received and created are the same
+        if len(dependee_to_dependents_mapping) != len(object.dependee_to_dependents_mapping) or len(parent_to_child_mapping) != len(object.parent_to_child_mapping):
+            raise ValueError('Different dependents and parents formed.')
+        for x in dependee_to_dependents_mapping:
+            if x not in object.dependee_to_dependents_mapping:
+                raise ValueError("Dependents dont match.")
+        for x in parent_to_child_mapping:
+            if x not in object.parent_to_child_mapping:
+                raise ValueError("Parents dont match.")
 
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
@@ -118,23 +127,14 @@ class WriteInExcel:
     def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case):
         # add new columns in dataframe
         number_of_columns_pre_sequence = len(df.columns)
-        # print('number of columns before sequence: {}'.format(
-        #     number_of_columns_pre_sequence))
-        # print("The class:row mapping is: ")
-        # print(self.class_row_mapping)
         for event_number in range(len(function_sequence)):
             df['{}'.format(event_number)] = np.nan
-        # print('Number of columns after adding empty for sequence: {}'.format(
-        #     len(df.columns)))
         event_counter = 1
         # counter to check whether its the first or last column in sequence diagram section
         for event in function_sequence:
-            # print('event is: {}'.format(event))
             caller, callee = event
             caller_class, caller_function = caller.split('.')
             callee_class, callee_function = callee.split('.')
-            # print("Caller class is {} and class_row_mapping is {}".format(
-            #     caller_class, self.class_row_mapping))
             caller_row_number, caller_column_number = self.class_row_mapping[
                 caller_class][1][caller_function]
             callee_row_number, callee_column_number = self.class_row_mapping[
@@ -156,7 +156,6 @@ class WriteInExcel:
         return df
 
     def write_df_to_excel(self, df, sheet_name, skip_cols, classes={}, use_case=None):
-        # print("Use Case as an argument is: {}".format(use_case))
         self.count += 1
         if self.count == 2:
             self.file_name = 'Use_Case_{}'.format(use_case) + self.file_name
@@ -182,11 +181,13 @@ class WriteInExcel:
                 print('Col {} is in dark edges column'.format(col_check_counter))
                 column_letter = get_column_letter(col_check_counter+1)
                 row_range = sorted(self.dark_edges_column[col_check_counter])
-                # plus one because dataframe's 0 is excel'1 but column headings are on 1 so we need to start from 2.
-                # the second addition of changing 0-indexed to 1-indexed comes in the next line while plotting.
-                # Now, second index of list is +2 so that we can cover the full range(0 to 3 is to be covered,
-                # so for loop would be from range(0,4))
-                # get the first and last row to draw the dark edges.
+                '''
+                plus one because dataframe's 0 is excel'1 but column headings are on 1 so we need to start from 2.
+                the second addition of changing 0-indexed to 1-indexed comes in the next line while plotting.
+                Now, second index of list is +2 so that we can cover the full range(0 to 3 is to be covered,
+                so for loop would be from range(0,4))
+                get the first and last row to draw the dark edges.
+                '''
                 for row_iterator in range(row_range[0]+1, row_range[-1]+2):
                     print('{}{}'.format(column_letter, row_iterator+1))
                     if col_check_counter >= skip_cols:  # should it be > or >=
@@ -225,7 +226,8 @@ class WriteInExcel:
                 col_counter += 1
                 continue
             else:
-                ws.column_dimensions[get_column_letter(col_counter)].hidden = True
+                ws.column_dimensions[get_column_letter(
+                    col_counter)].hidden = True
             ws.column_dimensions[get_column_letter(col_counter)].width = 3
             col_counter += 1
         # give bold font to cells with Classes
