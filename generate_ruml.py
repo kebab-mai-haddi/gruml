@@ -3,6 +3,7 @@ import importlib
 import os
 import pyclbr
 import sys
+from collections import defaultdict
 from trace import Trace
 
 import pandas as pd
@@ -23,6 +24,8 @@ class GRUML:
         self.driver_path = None
         self.driver_name = None
         self.test = test
+        self.parent_to_child_mapping = defaultdict(list)
+        self.dependee_to_dependents_mapping = defaultdict(list)
 
     def get_source_code_path_and_modules(self):
         self.source_code_path = [input('Please enter the source code path \n')]
@@ -35,8 +38,6 @@ class GRUML:
                         rel_dir, file) if rel_dir != '.' else file
                     file = file.split(".py")[0]
                     self.source_code_modules += [file]
-        # print("Will be checking the following modules: ")
-        # print(self.source_code_modules)
 
     def get_driver_path_and_driver_name(self):
         use_case = input(
@@ -106,6 +107,8 @@ class GRUML:
                             class_extra['Class'], parent))
                     else:
                         actual_parents.append(parent)
+                        self.parent_to_child_mapping[actual_parents[-1]
+                                                     ].append(class_extra)
             agg_data[class_extra_index]['Parents'] = actual_parents
         print(' ---------------------------------- ')
         for _ in range(20):
@@ -116,7 +119,6 @@ class GRUML:
         print(' ---------------------------------- ')
         for _ in range(20):
             print('\n')
-        # print('\n')
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
             module = file_.split('/')[-1].split('.py')[0]
@@ -135,6 +137,8 @@ class GRUML:
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
                                 agg_data[class_index[_class]]['Dependents'].append(class_[
                                     'class'])
+                                self.dependee_to_dependents_mapping[_class].append(class_[
+                                                                                   'class'])
                 except AttributeError:
                     pass
                 except KeyError as key_error:
@@ -153,17 +157,10 @@ class GRUML:
                 for parent in data['Parents']:
                     parents_set.add(parent)
         self.skip_cols = len(parents_set) + len(dependees_set)
-        #     print(data)
-        #     print('========')
-        #     print('\n')
-        print('Skip cols are: {}'.format(self.skip_cols))
-        # print('The whole data set is: ')
-        # for element in agg_data:
-        #     print(element)
         # The whole data is now collected and we need to form the dataframe of it:
         self.write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
         self.df = self.write_in_excel.create_pandas_dataframe(
-            agg_data, self.skip_cols)
+            agg_data, self.skip_cols, self)
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 
@@ -179,8 +176,6 @@ class GRUML:
         tracer = Trace(countfuncs=1, countcallers=1, timing=1)
         tracer.run('foo.{}()'.format(driver_function))
         results = tracer.results()
-        # print('results of tracer are: ')
-        # print(results)
         caller_functions = results.callers
         function_sequence = []  # consists of all functions called in sequence
         for caller, callee in caller_functions:
@@ -189,14 +184,10 @@ class GRUML:
             if caller_module not in self.source_code_modules:
                 continue
             function_sequence.append([caller_function, callee_function])
-        # print('Function sequence: ')
         for sequence in function_sequence:
             print(sequence)
         self.df = self.write_in_excel.integrate_sequence_diagram_in_df(
             self.df, function_sequence, use_case)
-        # print('Inside generate_ruml.py and the df formed after integrating sequence diagram is: ')
-        # print(self.df)
-        # print("Calling 2nd time, use case {}".format(use_case))
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered, use_case)
 
