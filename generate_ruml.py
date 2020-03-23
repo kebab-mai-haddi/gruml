@@ -24,8 +24,6 @@ class GRUML:
         self.driver_path = None
         self.driver_name = None
         self.test = test
-        self.parent_to_child_mapping = defaultdict(list)
-        self.dependee_to_dependents_mapping = defaultdict(list)
 
     def get_source_code_path_and_modules(self):
         """input source code that is to be studied and compute all
@@ -117,8 +115,6 @@ class GRUML:
                             class_extra['Class'], parent))
                     else:
                         actual_parents.append(parent)
-                        self.parent_to_child_mapping[actual_parents[-1]
-                                                     ].append(class_extra)
             agg_data[class_extra_index]['Parents'] = actual_parents
         print(' ---------------------------------- ')
         for _ in range(20):
@@ -147,8 +143,6 @@ class GRUML:
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
                                 agg_data[class_index[_class]]['Dependents'].append(class_[
                                     'class'])
-                                self.dependee_to_dependents_mapping[_class].append(class_[
-                                                                                   'class'])
                 except AttributeError:
                     pass
                 except KeyError as key_error:
@@ -170,7 +164,7 @@ class GRUML:
         # The whole data is now collected and we need to form the dataframe of it:
         self.write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
         self.df = self.write_in_excel.create_pandas_dataframe(
-            agg_data, self.skip_cols, self)
+            agg_data, self.skip_cols)
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 
