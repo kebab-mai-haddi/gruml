@@ -20,12 +20,30 @@ class WriteInExcel:
         self.count = 0
 
     def get_number_of_rows_in_df(self, agg_data):
+        """compute number of rows in the dataframe using aggregated data.
+
+        Arguments:
+            agg_data {list} -- the complete data generated for the source code.
+
+        Returns:
+            int -- number of rows that will be plotted in the dataframe.
+        """
         number_of_rows = 0
         for class_dict in agg_data:
             number_of_rows += 1 + len(class_dict['Methods'])
         return number_of_rows
 
     def create_pandas_dataframe(self, agg_data, skip_cols):
+        """create pandas dataframe to be plotted in the excel/csv sheet.
+
+        Arguments:
+            agg_data {list} -- the complete data generated for the source code.
+            skip_cols {int} -- number of columns to be skipped on the left hand side of the 
+                               class in the dataframe.
+
+        Returns:
+            pandas.DataFrame -- the final dataframe created which is to be further styled and plotted in excel.
+        """
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
         print('Number of rows in total: {}'.format(number_of_rows))
         columns = ['' for _ in range(skip_cols+2)]
@@ -116,6 +134,16 @@ class WriteInExcel:
         return df
 
     def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case):
+        """integrates sequence diagram in the dataframe.
+
+        Arguments:
+            df {pandas.DataFrame} -- dataframe that has to incorporate the sequence diagram.
+            function_sequence {[type]} -- sequence of the functions called while tracing a particular sequence diagram.
+            use_case {str} -- name of the use case for which we are drawing the sequence diagram.
+
+        Returns:
+            [type] -- 
+        """
         # add new columns in dataframe
         number_of_columns_pre_sequence = len(df.columns)
         # print('number of columns before sequence: {}'.format(
@@ -156,6 +184,17 @@ class WriteInExcel:
         return df
 
     def write_df_to_excel(self, df, sheet_name, skip_cols, classes={}, use_case=None):
+        """write dataframe to excel
+
+        Arguments:
+            df {pandas.DataFrame} -- the dataframe that we have to write to excel after making some changes.
+            sheet_name {str} -- name of the target excel sheet/
+            skip_cols {int} -- number of columns to be skipped for drawing out arrows.
+
+        Keyword Arguments:
+            classes {dict} -- name of the classes (default: {{}})
+            use_case {str} -- use case for which we are plotting a particular sequence diagram (default: {None})
+        """
         # print("Use Case as an argument is: {}".format(use_case))
         self.count += 1
         if self.count == 2:
@@ -225,7 +264,8 @@ class WriteInExcel:
                 col_counter += 1
                 continue
             else:
-                ws.column_dimensions[get_column_letter(col_counter)].hidden = True
+                ws.column_dimensions[get_column_letter(
+                    col_counter)].hidden = True
             ws.column_dimensions[get_column_letter(col_counter)].width = 3
             col_counter += 1
         # give bold font to cells with Classes
