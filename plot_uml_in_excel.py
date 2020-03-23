@@ -126,16 +126,6 @@ class WriteInExcel:
                     self.dark_edges_column[column_counter].append(
                         self.class_row_mapping[child][0])
             column_counter -= 1
-        # checking whether the received and created are the same
-        if len(dependee_to_dependents_mapping) != len(object.dependee_to_dependents_mapping) or len(parent_to_child_mapping) != len(object.parent_to_child_mapping):
-            raise ValueError('Different dependents and parents formed.')
-        for x in dependee_to_dependents_mapping:
-            if x not in object.dependee_to_dependents_mapping:
-                raise ValueError("Dependents dont match.")
-        for x in parent_to_child_mapping:
-            if x not in object.parent_to_child_mapping:
-                raise ValueError("Parents dont match.")
-
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
         # print("Create DF was called.")
