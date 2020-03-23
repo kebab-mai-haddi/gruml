@@ -28,6 +28,9 @@ class GRUML:
         self.dependee_to_dependents_mapping = defaultdict(list)
 
     def get_source_code_path_and_modules(self):
+        """input source code that is to be studied and compute all
+        modules inside it.
+        """
         self.source_code_path = [input('Please enter the source code path \n')]
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             for file in filenames:
@@ -40,6 +43,11 @@ class GRUML:
                     self.source_code_modules += [file]
 
     def get_driver_path_and_driver_name(self):
+        """ask for driver path and driver module's  name.
+
+        Returns:
+            str, str, str, str -- returns use case, driver path, driver name, driver function.
+        """
         use_case = input(
             'Please enter the use case or press Ctrl-c to exit the program: \n'
         )
@@ -55,6 +63,8 @@ class GRUML:
         return use_case, driver_path, driver_name, driver_function
 
     def generate_dependency_data(self):
+        """generate dependency (inheritance and non-inheritance) data.
+        """
         agg_data = []
         # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
         files = {}
@@ -165,6 +175,9 @@ class GRUML:
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 
     def generate_sequential_function_calls(self):
+        """generate sequential function calls
+        for tracing source code and plotting sequence diagram.
+        """
         # generating sequence diagram for a use-case
         use_case, driver_path, driver_name, driver_function = self.get_driver_path_and_driver_name()
         generate_sequence_diagram = GenerateSequenceDiagram(
@@ -193,6 +206,8 @@ class GRUML:
 
 
 def main():
+    """driver function of GRUML.
+    """
     gruml = GRUML()
     gruml.get_source_code_path_and_modules()
     gruml.generate_dependency_data()
