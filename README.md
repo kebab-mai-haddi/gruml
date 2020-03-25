@@ -11,9 +11,14 @@ where `3.7` is the Python version you are using.
 TODO
 ### Linux users
 TODO
+## Cloning the source code
+`git clone https://github.com/kebab-mai-haddi/generate_uml.git`
 
 # Running the application
+`cd generate_uml`
+
 `python3 generate_ruml.py`
+
 The command line will soon ask for your input which is the destination of the source code. This is where you enter the directory's address. For eg, I enter `/Users/aviralsrivastava/Desktop/source_codes_to_study/spiderfoot`
 The command will then ask you to enter the use case or you can exit the program using `Ctrl-c`.
 
