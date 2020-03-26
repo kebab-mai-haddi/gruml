@@ -150,7 +150,11 @@ class WriteInExcel:
         event_counter = 1
         # counter to check whether its the first or last column in sequence diagram section
         for event in function_sequence:
+            print("Event is: {}".format(event))
+            if "main_2" in event:
+                continue
             caller, callee = event
+            print("caller is: {}".format(caller))
             caller_class, caller_function = caller.split('.')
             callee_class, callee_function = callee.split('.')
             caller_row_number, caller_column_number = self.class_row_mapping[
