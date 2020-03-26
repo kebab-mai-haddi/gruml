@@ -23,4 +23,31 @@ The command line will soon ask for your input which is the destination of the so
 The command will then ask you to enter the use case or you can exit the program using `Ctrl-c`.
 
 # Example
+## A simple example
+Download a source code from [here](https://drive.google.com/open?id=1EXCm04JnHUzMuytZ3iGul2IuLr0in6Of)
+
+```
+python3 generate_ruml.py
+```
+> Please enter the source code path
+```
+/Users/aviralsrivastava/Desktop/source_code_to_study/
+```
+> Please enter the use case or press Ctrl-c to exit the program:
+```
+random_name
+```
+> Please enter the driver path:
+```
+/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py
+```
+> Please enter the driver name:
+```
+main_2
+```
+You will see, at the end: 
+```
+sheet_one done!
+```
+## A real example
 If you run our code(master branch) on [Spiderfoot](https://github.com/smicallef/spiderfoot) source code, you will have an output something like [this](https://docs.google.com/spreadsheets/d/1lnKfrPYF90uyFJ_NoYWOFdR5sMolwc0H62FwLg0dLcw/edit?usp=sharing).
