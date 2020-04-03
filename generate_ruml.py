@@ -24,6 +24,7 @@ class GRUML:
         self.driver_path = None
         self.driver_name = None
         self.test = test
+        self.use_case = True
 
     def get_source_code_path_and_modules(self):
         """input source code that is to be studied and compute all
@@ -47,18 +48,21 @@ class GRUML:
             str, str, str, str -- returns use case, driver path, driver name, driver function.
         """
         use_case = input(
-            'Please enter the use case or press Ctrl-c to exit the program: \n'
+            'Please enter the use case or enter -1 if you want to skip use-case diagram generation: \n'
         )
-        driver_path = input(
+        if use_case == '-1' or use_case == -1:
+            self.use_case = False
+            return
+        self.use_case = use_case
+        self.driver_path = input(
             'Please enter the driver path: \n'
         )
-        driver_name = input(
+        self.driver_name = input(
             'Please enter the driver name: \n'
         )
-        driver_function = input(
+        self.driver_function = input(
             'Please enter the driver function name: \n'
         )
-        return use_case, driver_path, driver_name, driver_function
 
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
@@ -173,15 +177,15 @@ class GRUML:
         for tracing source code and plotting sequence diagram.
         """
         # generating sequence diagram for a use-case
-        use_case, driver_path, driver_name, driver_function = self.get_driver_path_and_driver_name()
         generate_sequence_diagram = GenerateSequenceDiagram(
-            driver_path, driver_name, self.source_code_path[0])
-        spec = importlib.util.spec_from_file_location(driver_name, driver_path)
+            self.driver_path, self.driver_name, self.source_code_path[0])
+        spec = importlib.util.spec_from_file_location(
+            self.driver_name, self.driver_path)
         global foo
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
         tracer = Trace(countfuncs=1, countcallers=1, timing=1)
-        tracer.run('foo.{}()'.format(driver_function))
+        tracer.run('foo.{}()'.format(self.driver_function))
         results = tracer.results()
         caller_functions = results.callers
         function_sequence = []  # consists of all functions called in sequence
@@ -194,9 +198,9 @@ class GRUML:
         for sequence in function_sequence:
             print(sequence)
         self.df = self.write_in_excel.integrate_sequence_diagram_in_df(
-            self.df, function_sequence, use_case)
+            self.df, function_sequence, self.use_case)
         self.write_in_excel.write_df_to_excel(
-            self.df, 'sheet_one', self.skip_cols, self.classes_covered, use_case)
+            self.df, 'sheet_one', self.skip_cols, self.classes_covered, self.use_case)
 
 
 def main():
@@ -204,8 +208,10 @@ def main():
     """
     gruml = GRUML()
     gruml.get_source_code_path_and_modules()
+    gruml.get_driver_path_and_driver_name()
     gruml.generate_dependency_data()
-    gruml.generate_sequential_function_calls()
+    if gruml.use_case is True:
+        gruml.generate_sequential_function_calls()
 
 
 main()
