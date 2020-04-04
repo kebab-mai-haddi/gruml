@@ -1,5 +1,6 @@
 import ast
 import importlib
+import logging
 import os
 import pyclbr
 import sys
@@ -14,6 +15,8 @@ from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 
 foo = None
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class GRUML:
@@ -101,9 +104,9 @@ class GRUML:
                 class_index[name] = counter
                 counter += 1
                 self.classes_covered[name] = 1
-        print(' ---------------------------------- ')
+        logging.debug(' ---------------------------------- ')
         for _ in range(20):
-            print('\n')
+            logging.debug('\n')
         for class_extra_index in range(len(agg_data)):
             class_extra = agg_data[class_extra_index]
             actual_parents = []
@@ -115,20 +118,20 @@ class GRUML:
                             parent_in_codebase = True
                             break
                     if not parent_in_codebase:
-                        print('Class: {} has Parent: {} which is not in the entire codebase.'.format(
+                        logging.debug('Class: {} has Parent: {} which is not in the entire codebase.'.format(
                             class_extra['Class'], parent))
                     else:
                         actual_parents.append(parent)
             agg_data[class_extra_index]['Parents'] = actual_parents
-        print(' ---------------------------------- ')
+        logging.debug(' ---------------------------------- ')
         for _ in range(20):
-            print('\n')
+            logging.debug('\n')
         for classes_extra in agg_data:
-            print('Class: {}, Parent(s): {}'.format(
+            logging.debug('Class: {}, Parent(s): {}'.format(
                 classes_extra['Class'], classes_extra['Parents']))
-        print(' ---------------------------------- ')
+        logging.debug(' ---------------------------------- ')
         for _ in range(20):
-            print('\n')
+            logging.debug('\n')
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
             module = file_.split('/')[-1].split('.py')[0]
@@ -142,7 +145,7 @@ class GRUML:
                         alias = use_[1]
                         line_no = use_[2]
                         for class_ in files[j]:
-                            print('Checking for class {} in file {} and _class is {}'.format(
+                            logging.debug('Checking for class {} in file {} and _class is {}'.format(
                                 class_, files[j], _class))
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
                                 agg_data[class_index[_class]]['Dependents'].append(class_[
@@ -150,7 +153,7 @@ class GRUML:
                 except AttributeError:
                     pass
                 except KeyError as key_error:
-                    print(
+                    logging.debug(
                         'Class {} was not found in agg_data but was brought up while checking non-inheritance dependencies, generating error: {}'.format(
                             _class, key_error
                         )
@@ -196,7 +199,7 @@ class GRUML:
                 continue
             function_sequence.append([caller_function, callee_function])
         for sequence in function_sequence:
-            print(sequence)
+            logging.debug(sequence)
         self.df = self.write_in_excel.integrate_sequence_diagram_in_df(
             self.df, function_sequence, self.use_case)
         self.write_in_excel.write_df_to_excel(
