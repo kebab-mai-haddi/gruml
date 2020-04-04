@@ -1,6 +1,9 @@
-from trace import Trace
 import importlib
+import logging
 import sys
+from trace import Trace
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class GenerateSequenceDiagram:
@@ -23,11 +26,11 @@ class GenerateSequenceDiagram:
         # # main_2 = foo.main_2()
         # tracer = Trace(countfuncs=1)
         # function_to_be_called = foo.__getattribute__('main_2')
-        # print(dir(function_to_be_called))
+        # logging.debug(dir(function_to_be_called))
         # func_name = function_to_be_called.__name__
         # tracer.run('{}()'.format(func_name)) #resolve hardcoded driver function.
         # results = tracer.results()
-        # print(results.calledfuncs)
+        # logging.debug(results.calledfuncs)
         spec = importlib.util.spec_from_file_location(
             "driver", "/Users/aviralsrivastava/Desktop/source_code_to_study/driver.py")
         foo = importlib.util.module_from_spec(spec)

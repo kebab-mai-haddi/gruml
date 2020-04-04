@@ -1,8 +1,11 @@
 
+import logging
 import os
 import subprocess
 import sys
 from operator import itemgetter
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class GenerateHierarchy:
@@ -16,7 +19,7 @@ class GenerateHierarchy:
             name {str} -- name of the class for which data is to be shown.
             class_data {list} -- complete class_data as generated from pyclbr.
         """
-        # print(class_data)
+        # logging.debug(class_data)
         self.class_dict[name] = []
         self.show_super_classes(name, class_data)
 
@@ -33,7 +36,7 @@ class GenerateHierarchy:
         methods = []
         for name, _ in sorted(class_data.methods.items(),
                               key=itemgetter(1)):
-            # print('  Method: {0} [{1}]'.format(name, lineno))
+            # logging.debug('  Method: {0} [{1}]'.format(name, lineno))
             methods.append(name)
         return methods
 

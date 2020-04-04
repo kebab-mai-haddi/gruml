@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 
 import numpy as np
@@ -5,6 +6,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class WriteInExcel:
@@ -45,7 +48,7 @@ class WriteInExcel:
             pandas.DataFrame -- the final dataframe created which is to be further styled and plotted in excel.
         """
         number_of_rows = self.get_number_of_rows_in_df(agg_data)
-        print('Number of rows in total: {}'.format(number_of_rows))
+        logging.debug('Number of rows in total: {}'.format(number_of_rows))
         columns = ['' for _ in range(skip_cols+2)]
         df = pd.DataFrame(
             index=np.arange(0, number_of_rows),
@@ -74,7 +77,7 @@ class WriteInExcel:
             df.loc[row_counter] = columns + [base_class]
             row_counter += 1
             for method in methods:
-                # print('Inserting method: {} of class: {} at row: {} and column: {}'.format(
+                # logging.debug('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                     # method, base_class, row_counter, skip_cols+1))
                 df.iloc[row_counter, skip_cols+2] = method
                 self.class_row_mapping[base_class][1][method] = (
@@ -100,11 +103,11 @@ class WriteInExcel:
             dependees_and_parents_combined.add(dependee)
         for parent in parent_to_child_mapping.keys():
             dependees_and_parents_combined.add(parent)
-        print("All classes that are parents or dependees are: ")
-        print(dependees_and_parents_combined)
+        logging.debug("All classes that are parents or dependees are: ")
+        logging.debug(dependees_and_parents_combined)
         for class_ in dependees_and_parents_combined:
             if not self.class_row_mapping.get(class_, None):
-                print(
+                logging.debug(
                     'This class is in dependees and parents combined but not in class row mapping: {}'.format(class_))
                 continue
             df.iloc[self.class_row_mapping[class_][0]][column_counter] = "⇒"
@@ -128,8 +131,8 @@ class WriteInExcel:
             column_counter -= 1
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
-        # print("Create DF was called.")
-        # print(df)
+        # logging.debug("Create DF was called.")
+        # logging.debug(df)
         return df
 
     def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case):
@@ -150,11 +153,11 @@ class WriteInExcel:
         event_counter = 1
         # counter to check whether its the first or last column in sequence diagram section
         for event in function_sequence:
-            print("Event is: {}".format(event))
+            logging.debug("Event is: {}".format(event))
             if "main_2" in event:
                 continue
             caller, callee = event
-            print("caller is: {}".format(caller))
+            logging.debug("caller is: {}".format(caller))
             caller_class, caller_function = caller.split('.')
             callee_class, callee_function = callee.split('.')
             caller_row_number, caller_column_number = self.class_row_mapping[
@@ -189,7 +192,7 @@ class WriteInExcel:
             classes {dict} -- name of the classes (default: {{}})
             use_case {str} -- use case for which we are plotting a particular sequence diagram (default: {None})
         """
-        # print("Use Case as an argument is: {}".format(use_case))
+        # logging.debug("Use Case as an argument is: {}".format(use_case))
         self.count += 1
         if self.count == 2:
             self.file_name = 'Use_Case_{}'.format(use_case) + self.file_name
@@ -209,10 +212,10 @@ class WriteInExcel:
         bd = Side(style='thick', color='000000')
         # to check whether a col in sheet's columns has arrived for dark edges.
         col_check_counter = 0
-        print('Skip columns are: {}'.format(skip_cols))
+        logging.debug('Skip columns are: {}'.format(skip_cols))
         for _ in ws.columns:
             if col_check_counter in self.dark_edges_column:
-                print('Col {} is in dark edges column'.format(col_check_counter))
+                logging.debug('Col {} is in dark edges column'.format(col_check_counter))
                 column_letter = get_column_letter(col_check_counter+1)
                 row_range = sorted(self.dark_edges_column[col_check_counter])
                 '''
@@ -223,7 +226,7 @@ class WriteInExcel:
                 get the first and last row to draw the dark edges.
                 '''
                 for row_iterator in range(row_range[0]+1, row_range[-1]+2):
-                    print('{}{}'.format(column_letter, row_iterator+1))
+                    logging.debug('{}{}'.format(column_letter, row_iterator+1))
                     if col_check_counter >= skip_cols:  # should it be > or >=
                         ws['{}{}'.format(column_letter, row_iterator+1)
                            ].border = Border(right=bd)
@@ -246,17 +249,22 @@ class WriteInExcel:
                 ws['{}{}'.format(column_letter, row)].fill = red_fill
         # add a new row in the worksheet
         if use_case:
-            print("Working for the Use Case: {}".format(use_case))
+            logging.debug("Working for the Use Case: {}".format(use_case))
             ws.insert_rows(0)
             use_case_column_letter = get_column_letter(skip_cols+4)
             use_case_cell = '{}{}'.format(use_case_column_letter, 1)
-            print("Use Case cell is {}".format(use_case_cell))
+            logging.debug("Use Case cell is {}".format(use_case_cell))
             ws[use_case_cell] = use_case
             # adjust the width of all columns
         col_counter = 1
         for _ in ws.columns:
-            if col_counter == skip_cols+3:
-                ws.column_dimensions[get_column_letter(col_counter)].width = 36
+            if col_counter > skip_cols:
+                if col_counter == skip_cols+3:
+                    ws.column_dimensions[get_column_letter(
+                        col_counter)].width = 36
+                else:
+                    ws.column_dimensions[get_column_letter(
+                        col_counter)].width = 3
                 col_counter += 1
                 continue
             else:
@@ -267,11 +275,11 @@ class WriteInExcel:
         # give bold font to cells with Classes
         classes_column = get_column_letter(skip_cols+3)
         font = Font(bold=True)
-        for row in range(1, ws.max_row+1):
+        for row in range(2, ws.max_row+1):
             if ws['{}{}'.format(classes_column, row)].value:
                 if ws['{}{}'.format(classes_column, row)].value in classes:
                     ws['{}{}'.format(classes_column, row)].font = font
                 else:
                     ws.row_dimensions[row].hidden = True
         wb.save(self.file_name)
-        print("{}:{} done!".format(self.file_name, sheet_name))
+        logging.debug("{}:{} done!".format(self.file_name, sheet_name))
