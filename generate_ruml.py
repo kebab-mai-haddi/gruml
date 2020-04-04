@@ -48,9 +48,9 @@ class GRUML:
             str, str, str, str -- returns use case, driver path, driver name, driver function.
         """
         use_case = input(
-            'Please enter the use case or enter -1 if you want to skip use-case diagram generation: \n'
+            'Please enter the use case or enter "N" if you want to skip use-case diagram generation: \n'
         )
-        if use_case == '-1' or use_case == -1:
+        if use_case == 'N':
             self.use_case = False
             return
         self.use_case = use_case
