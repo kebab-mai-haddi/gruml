@@ -215,7 +215,8 @@ class WriteInExcel:
         logging.debug('Skip columns are: {}'.format(skip_cols))
         for _ in ws.columns:
             if col_check_counter in self.dark_edges_column:
-                logging.debug('Col {} is in dark edges column'.format(col_check_counter))
+                logging.debug(
+                    'Col {} is in dark edges column'.format(col_check_counter))
                 column_letter = get_column_letter(col_check_counter+1)
                 row_range = sorted(self.dark_edges_column[col_check_counter])
                 '''
@@ -280,6 +281,10 @@ class WriteInExcel:
                 if ws['{}{}'.format(classes_column, row)].value in classes:
                     ws['{}{}'.format(classes_column, row)].font = font
                 else:
+                    logging.debug("Hiding this row: {}".format(row))
                     ws.row_dimensions[row].hidden = True
+        # show the Class row when use-cases are there.
+        if use_case:
+            ws.row_dimensions[2].hidden = False
         wb.save(self.file_name)
         logging.debug("{}:{} done!".format(self.file_name, sheet_name))
