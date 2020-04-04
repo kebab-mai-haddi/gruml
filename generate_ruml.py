@@ -180,7 +180,7 @@ class GRUML:
         for tracing source code and plotting sequence diagram.
         """
         # generating sequence diagram for a use-case
-        generate_sequence_diagram = GenerateSequenceDiagram(
+        _ = GenerateSequenceDiagram(
             self.driver_path, self.driver_name, self.source_code_path[0])
         spec = importlib.util.spec_from_file_location(
             self.driver_name, self.driver_path)
@@ -213,7 +213,7 @@ def main():
     gruml.get_source_code_path_and_modules()
     gruml.get_driver_path_and_driver_name()
     gruml.generate_dependency_data()
-    if gruml.use_case is True:
+    if gruml.use_case is not False:
         gruml.generate_sequential_function_calls()
 
 
