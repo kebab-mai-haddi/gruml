@@ -255,8 +255,13 @@ class WriteInExcel:
             # adjust the width of all columns
         col_counter = 1
         for _ in ws.columns:
-            if col_counter == skip_cols+3:
-                ws.column_dimensions[get_column_letter(col_counter)].width = 36
+            if col_counter > skip_cols:
+                if col_counter == skip_cols+3:
+                    ws.column_dimensions[get_column_letter(
+                        col_counter)].width = 36
+                else:
+                    ws.column_dimensions[get_column_letter(
+                        col_counter)].width = 3
                 col_counter += 1
                 continue
             else:
@@ -267,7 +272,7 @@ class WriteInExcel:
         # give bold font to cells with Classes
         classes_column = get_column_letter(skip_cols+3)
         font = Font(bold=True)
-        for row in range(1, ws.max_row+1):
+        for row in range(2, ws.max_row+1):
             if ws['{}{}'.format(classes_column, row)].value:
                 if ws['{}{}'.format(classes_column, row)].value in classes:
                     ws['{}{}'.format(classes_column, row)].font = font
