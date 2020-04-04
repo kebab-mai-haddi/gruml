@@ -196,12 +196,16 @@ class GRUML:
             _, caller_module, caller_function = caller
             _, _, callee_function = callee
             if caller_module not in self.source_code_modules:
+                logging.debug(
+                    "Following modules are not in source code and thus to be ignored:")
+                logging.debug(caller_module)
                 continue
             function_sequence.append([caller_function, callee_function])
+        logging.debug("Function sequence is: ")
         for sequence in function_sequence:
             logging.debug(sequence)
         self.df = self.write_in_excel.integrate_sequence_diagram_in_df(
-            self.df, function_sequence, self.use_case)
+            self.df, function_sequence, self.use_case, self.driver_function)
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered, self.use_case)
 
