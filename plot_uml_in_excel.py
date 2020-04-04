@@ -135,7 +135,7 @@ class WriteInExcel:
         # logging.debug(df)
         return df
 
-    def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case):
+    def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case, driver_function):
         """integrates sequence diagram in the dataframe.
 
         Arguments:
@@ -152,14 +152,25 @@ class WriteInExcel:
             df['{}'.format(event_number)] = np.nan
         event_counter = 1
         # counter to check whether its the first or last column in sequence diagram section
+        logging.debug("Class row mapping: ")
+        logging.debug(self.class_row_mapping)
+        logging.debug("Function sequence received to plot is: ")
+        logging.debug(function_sequence)
         for event in function_sequence:
             logging.debug("Event is: {}".format(event))
-            if "main_2" in event:
-                continue
             caller, callee = event
             logging.debug("caller is: {}".format(caller))
+            if caller == driver_function:
+                continue
             caller_class, caller_function = caller.split('.')
+            logging.debug("Caller class is: {}, caller function is: {}".format(
+                caller_class, caller_function))
             callee_class, callee_function = callee.split('.')
+            logging.debug("Callee class is: {}, callee function is: {}".format(
+                callee_class, callee_function
+            ))
+            if caller_class not in self.class_row_mapping or callee_class not in self.class_row_mapping:
+                continue
             caller_row_number, caller_column_number = self.class_row_mapping[
                 caller_class][1][caller_function]
             callee_row_number, callee_column_number = self.class_row_mapping[
