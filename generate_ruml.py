@@ -83,6 +83,8 @@ class GRUML:
                 self.source_code_path[0], os.path.dirname(source_code_module))]
             source_code_data = pyclbr.readmodule(
                 source_code_module, path=source_code_path)
+            classless_function_data = pyclbr.readmodule_ex(
+                source_code_module, path=source_code_path)
             generate_hierarchy = GenerateHierarchy()
             for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
                 if self.classes_covered.get(name):
