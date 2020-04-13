@@ -174,7 +174,6 @@ class GRUML:
             agg_data, self.skip_cols)
         logging.debug('Dataframe is: \n')
         logging.debug(self.df)
-        sys.exit()
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 
