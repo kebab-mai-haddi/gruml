@@ -28,6 +28,7 @@ class GRUML:
         self.driver_name = None
         self.test = test
         self.use_case = True
+        self.class_object_mapping = defaultdict(dict)
 
     def get_source_code_path_and_modules(self):
         """input source code that is to be studied and compute all
@@ -70,68 +71,64 @@ class GRUML:
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
         """
-        agg_data = []
+        agg_data = defaultdict(list)
         # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
         files = {}
-        class_index = {}
-        counter = 0
+        class_index = defaultdict(lambda: defaultdict(int))
         # to check if a class has already been covered due to some import in another file.
-        self.classes_covered = {}
-
+        self.classes_covered = defaultdict(lambda: defaultdict(int))
         for source_code_module in self.source_code_modules:
+            counter = 0
             source_code_module, source_code_path = os.path.basename(source_code_module), [os.path.join(
                 self.source_code_path[0], os.path.dirname(source_code_module))]
-            source_code_data = pyclbr.readmodule(
+            # source_code_data = pyclbr.readmodule(
+            #     source_code_module, path=source_code_path)
+            source_code_data = pyclbr.readmodule_ex(
                 source_code_module, path=source_code_path)
             generate_hierarchy = GenerateHierarchy()
-            for name, class_data in sorted(source_code_data.items(), key=lambda x: x[1].lineno):
-                if self.classes_covered.get(name):
+            for name, class_data in source_code_data.items():
+                # don't cover classes that are not in the source code modules
+                if class_data.module not in self.source_code_modules:
                     continue
-                methods = generate_hierarchy.show_methods(name, class_data)
-                parents = generate_hierarchy.show_super_classes(
-                    name, class_data)
+
+                self.class_object_mapping[class_data.module]['{}'.format(
+                    class_data.name)] = class_data
+                methods = []
+                parents = []
+                if isinstance(class_data, pyclbr.Class):
+                    methods = generate_hierarchy.show_methods(name, class_data)
+                    parents = generate_hierarchy.show_super_classes(
+                        name, class_data, self)
                 file_ = class_data.file
                 start_line = class_data.lineno,
                 end_line = class_data.end_lineno
-                agg_data.append({"Class": name, "Methods": methods, "Parents": parents, "File": file_,
-                                 "Start Line": start_line, "End Line": end_line, "Dependents": []})
+                module = class_data.module
+                if module in self.classes_covered:
+                    if self.classes_covered[module].get(name):
+                        continue
+                agg_data[module].append(
+                    {
+                        "Class": name,
+                        "Methods": methods,
+                        "Parents": parents,
+                        "File": file_,
+                        "Start Line": start_line,
+                        "End Line": end_line,
+                        "Dependents": []
+                    }
+                )
                 if files.get(class_data.file, None):
                     files[class_data.file].append(
                         {'class': name, 'start_line': class_data.lineno, 'end_line': class_data.end_lineno})
                 else:
                     files[class_data.file] = [
                         {'class': name, 'start_line': class_data.lineno, 'end_line': class_data.end_lineno}]
-                class_index[name] = counter
+                class_index[module][name] = counter
                 counter += 1
-                self.classes_covered[name] = 1
+                self.classes_covered[module][name] = 1
         logging.debug(' ---------------------------------- ')
         for _ in range(20):
-            logging.debug('\n')
-        for class_extra_index in range(len(agg_data)):
-            class_extra = agg_data[class_extra_index]
-            actual_parents = []
-            if class_extra['Parents']:
-                for parent in class_extra['Parents']:
-                    parent_in_codebase = False
-                    for classes in agg_data:
-                        if classes['Class'] == parent:
-                            parent_in_codebase = True
-                            break
-                    if not parent_in_codebase:
-                        logging.debug('Class: {} has Parent: {} which is not in the entire codebase.'.format(
-                            class_extra['Class'], parent))
-                    else:
-                        actual_parents.append(parent)
-            agg_data[class_extra_index]['Parents'] = actual_parents
-        logging.debug(' ---------------------------------- ')
-        for _ in range(20):
-            logging.debug('\n')
-        for classes_extra in agg_data:
-            logging.debug('Class: {}, Parent(s): {}'.format(
-                classes_extra['Class'], classes_extra['Parents']))
-        logging.debug(' ---------------------------------- ')
-        for _ in range(20):
-            logging.debug('\n')
+            print('\n')
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
             module = file_.split('/')[-1].split('.py')[0]
@@ -148,8 +145,10 @@ class GRUML:
                             logging.debug('Checking for class {} in file {} and _class is {}'.format(
                                 class_, files[j], _class))
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
-                                agg_data[class_index[_class]]['Dependents'].append(class_[
-                                    'class'])
+                                dependent_module = j.split(
+                                    '/')[-1].split('.py')[0]
+                                agg_data[module][class_index[module][_class]]['Dependents'].append(
+                                    {'module': dependent_module, 'class': class_['class']})
                 except AttributeError:
                     pass
                 except KeyError as key_error:
@@ -161,17 +160,20 @@ class GRUML:
         self.skip_cols = 0
         parents_set = set()
         dependees_set = set()
-        for data in agg_data:
-            if data['Dependents']:
-                dependees_set.add(data['Class'])
-            if data['Parents']:
-                for parent in data['Parents']:
-                    parents_set.add(parent)
+        for module in agg_data.keys():
+            for class_ in agg_data[module]:
+                if class_['Dependents']:
+                    dependees_set.add('{}.{}'.format(module, class_['Class']))
+                if class_['Parents']:
+                    for parent in class_['Parents']:
+                        parents_set.add('{}.{}'.format(parent['parent_module'], parent['parent_class']))
         self.skip_cols = len(parents_set) + len(dependees_set)
         # The whole data is now collected and we need to form the dataframe of it:
         self.write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
         self.df = self.write_in_excel.create_pandas_dataframe(
             agg_data, self.skip_cols)
+        logging.debug('Dataframe is: \n')
+        logging.debug(self.df)
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 

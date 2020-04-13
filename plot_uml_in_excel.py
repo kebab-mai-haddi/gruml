@@ -26,14 +26,16 @@ class WriteInExcel:
         """compute number of rows in the dataframe using aggregated data.
 
         Arguments:
-            agg_data {list} -- the complete data generated for the source code.
+            agg_data {defaultdict(list)} -- the complete data generated for the source code.
 
         Returns:
             int -- number of rows that will be plotted in the dataframe.
         """
         number_of_rows = 0
-        for class_dict in agg_data:
-            number_of_rows += 1 + len(class_dict['Methods'])
+        for module in agg_data.keys():
+            number_of_rows += 1
+            for class_dict in agg_data[module]:
+                number_of_rows += 1 + len(class_dict['Methods'])
         return number_of_rows
 
     def create_pandas_dataframe(self, agg_data, skip_cols):
@@ -57,78 +59,89 @@ class WriteInExcel:
         row_counter = 0
         column_counter = skip_cols-1
         # mapping to store row, col for dependents.
-        dependents_col_counter = {}
         # parent: child mapping created just for plotting tree like line
-        parent_to_child_mapping = defaultdict(list)
-        dependee_to_dependents_mapping = defaultdict(list)
-        # {class: [row number, {methods: row_number}]} mapping
-        self.class_row_mapping = defaultdict(list)
+        parent_to_child_mapping = defaultdict(lambda: defaultdict(list))
+        dependee_to_dependents_mapping = defaultdict(lambda: defaultdict(list))
+        # {module : {class: [row number, {methods: row_number}]}} mapping
+        self.class_row_mapping = defaultdict(lambda: defaultdict(list))
         # mapping to store dark edges -> 0: [17, 10, 13] is a COLUMN:ROWS range.
         self.dark_edges_column = defaultdict(list)
         self.inheritance_edges_column = defaultdict(list)
-        prev_class_row_counter = 0
-        for class_data in agg_data:
-            base_class = class_data['Class']
-            self.class_row_mapping[base_class] = [row_counter, {}]
-            methods = class_data['Methods']
-            parents = class_data['Parents']
-            dependents = class_data['Dependents']
-            columns = ['' for _ in range(skip_cols+2)]
-            df.loc[row_counter] = columns + [base_class]
+        for module in agg_data.keys():
+            logging.debug(
+                "Currently framing df with module: {}".format(module))
+            df.loc[row_counter] = columns + ['{} (module)'.format(module)]
             row_counter += 1
-            for method in methods:
-                # logging.debug('Inserting method: {} of class: {} at row: {} and column: {}'.format(
-                    # method, base_class, row_counter, skip_cols+1))
-                df.iloc[row_counter, skip_cols+2] = method
-                self.class_row_mapping[base_class][1][method] = (
-                    row_counter, skip_cols+2)
+            for class_data in agg_data[module]:
+                base_class = class_data['Class']
+                self.class_row_mapping[module][base_class] = [row_counter, {}]
+                methods = class_data['Methods']
+                parents = class_data['Parents']
+                dependents = class_data['Dependents']
+                columns = ['' for _ in range(skip_cols+2)]
+                df.loc[row_counter] = columns + [base_class]
                 row_counter += 1
-            if parents:
-                for parent in parents:
-                    parent_to_child_mapping[parent].append(base_class)
-            if dependents:
-                for dependent in dependents:
-                    dependee_to_dependents_mapping[base_class].append(
-                        dependent)
-            prev_class_row_counter = row_counter
+                for method in methods:
+                    # logging.debug('Inserting method: {} of class: {} at row: {} and column: {}'.format(
+                        # method, base_class, row_counter, skip_cols+1))
+                    df.iloc[row_counter, skip_cols+2] = method
+                    self.class_row_mapping[module][base_class][1][method] = (
+                        row_counter, skip_cols+2)
+                    row_counter += 1
+                if parents:
+                    for parent in parents:
+                        parent_to_child_mapping[parent['parent_module']][parent['parent_class']].append(
+                            {'child_module': module, 'child_class': base_class}
+                        )
+                if dependents:
+                    for dependent in dependents:
+                        dependee_to_dependents_mapping[module][base_class].append(
+                            {'dependent_module': dependent['module'],
+                                'dependent_class': dependent['class']}
+                        )
 
-        for dependent in dependents_col_counter.keys():
-            for column in dependents_col_counter[dependent]:
-                df.iloc[self.class_row_mapping[dependent][0], column] = "←"
-                self.dark_edges_column[column].append(
-                    self.class_row_mapping[dependent][0])
         # get a single list of dependees and parents so as to draw a common vertical pipe
-        dependees_and_parents_combined = set()
-        for dependee in dependee_to_dependents_mapping.keys():
-            dependees_and_parents_combined.add(dependee)
-        for parent in parent_to_child_mapping.keys():
-            dependees_and_parents_combined.add(parent)
+        dependees_and_parents_combined = defaultdict(set)
+        for dependee_module in dependee_to_dependents_mapping.keys():
+            for dependee in dependee_to_dependents_mapping[dependee_module]:
+                dependees_and_parents_combined[dependee_module].add(dependee)
+        for parent_module in parent_to_child_mapping.keys():
+            for parent in parent_to_child_mapping[parent_module]:
+                dependees_and_parents_combined[parent_module].add(parent)
         logging.debug("All classes that are parents or dependees are: ")
         logging.debug(dependees_and_parents_combined)
-        for class_ in dependees_and_parents_combined:
-            if not self.class_row_mapping.get(class_, None):
-                logging.debug(
-                    'This class is in dependees and parents combined but not in class row mapping: {}'.format(class_))
+        for module in dependees_and_parents_combined:
+            if not self.class_row_mapping.get(module, None):
+                logging.warn(
+                    "Out of scope module was brought up, no row maping found")
                 continue
-            df.iloc[self.class_row_mapping[class_][0]][column_counter] = "⇒"
-            self.dark_edges_column[column_counter].append(
-                self.class_row_mapping[class_][0]
-            )
-            if class_ in dependee_to_dependents_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols] = "⇒"
-                for dependent in dependee_to_dependents_mapping[class_]:
-                    df.iloc[self.class_row_mapping[dependent]
-                            [0], column_counter] = "←"
-                    self.dark_edges_column[column_counter].append(
-                        self.class_row_mapping[dependent][0])
-            if class_ in parent_to_child_mapping:
-                df.iloc[self.class_row_mapping[class_][0]][skip_cols+1] = "▷"
-                for child in parent_to_child_mapping[class_]:
-                    df.iloc[self.class_row_mapping[child]
-                            [0], column_counter] = "◁"
-                    self.dark_edges_column[column_counter].append(
-                        self.class_row_mapping[child][0])
-            column_counter -= 1
+            for class_ in dependees_and_parents_combined[module]:
+                if not self.class_row_mapping[module].get(class_, None):
+                    logging.debug(
+                        'This class is in dependees and parents combined but not in class row mapping: {}'.format(class_))
+                    continue
+                df.iloc[self.class_row_mapping[module]
+                        [class_][0]][column_counter] = "⇒"
+                self.dark_edges_column[column_counter].append(
+                    self.class_row_mapping[module][class_][0]
+                )
+                if class_ in dependee_to_dependents_mapping[module]:
+                    df.iloc[self.class_row_mapping[module]
+                            [class_][0]][skip_cols] = "⇒"
+                    for dependent in dependee_to_dependents_mapping[module][class_]:
+                        df.iloc[self.class_row_mapping[dependent['dependent_module']][dependent['dependent_class']]
+                                [0], column_counter] = "←"
+                        self.dark_edges_column[column_counter].append(
+                            self.class_row_mapping[dependent['dependent_module']][dependent['dependent_class']][0])
+                if class_ in parent_to_child_mapping[module]:
+                    df.iloc[self.class_row_mapping[module]
+                            [class_][0]][skip_cols+1] = "▷"
+                    for child in parent_to_child_mapping[module][class_]:
+                        df.iloc[self.class_row_mapping[child['child_module']][child['child_class']]
+                                [0], column_counter] = "◁"
+                        self.dark_edges_column[column_counter].append(
+                            self.class_row_mapping[child['child_module']][child['child_class']][0])
+                column_counter -= 1
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
         # logging.debug("Create DF was called.")
@@ -267,7 +280,7 @@ class WriteInExcel:
             use_case_cell = '{}{}'.format(use_case_column_letter, 1)
             logging.debug("Use Case cell is {}".format(use_case_cell))
             ws[use_case_cell] = use_case
-            # adjust the width of all columns
+        # adjust the width of all columns
         col_counter = 1
         for _ in ws.columns:
             if col_counter > skip_cols:
@@ -284,12 +297,17 @@ class WriteInExcel:
                     col_counter)].hidden = True
             ws.column_dimensions[get_column_letter(col_counter)].width = 3
             col_counter += 1
-        # give bold font to cells with Classes
+        # give bold font to cells with Classes, to classless functions, and, to all modules
         classes_column = get_column_letter(skip_cols+3)
         font = Font(bold=True)
+        values_to_be_bold = set()
+        for module in classes.keys():
+            values_to_be_bold.add('{} (module)'.format(module))
+            for class_ in classes[module]:
+                values_to_be_bold.add(class_)
         for row in range(2, ws.max_row+1):
             if ws['{}{}'.format(classes_column, row)].value:
-                if ws['{}{}'.format(classes_column, row)].value in classes:
+                if ws['{}{}'.format(classes_column, row)].value in values_to_be_bold:
                     ws['{}{}'.format(classes_column, row)].font = font
                 else:
                     logging.debug("Hiding this row: {}".format(row))
