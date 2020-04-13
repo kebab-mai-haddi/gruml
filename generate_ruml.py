@@ -172,6 +172,9 @@ class GRUML:
         self.write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
         self.df = self.write_in_excel.create_pandas_dataframe(
             agg_data, self.skip_cols)
+        logging.debug('Dataframe is: \n')
+        logging.debug(self.df)
+        sys.exit()
         self.write_in_excel.write_df_to_excel(
             self.df, 'sheet_one', self.skip_cols, self.classes_covered)
 
