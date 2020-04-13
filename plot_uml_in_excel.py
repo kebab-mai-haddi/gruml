@@ -70,7 +70,7 @@ class WriteInExcel:
         for module in agg_data.keys():
             logging.debug(
                 "Currently framing df with module: {}".format(module))
-            df.loc[row_counter] = columns + [module]
+            df.loc[row_counter] = columns + ['{} (module)'.format(module)]
             row_counter += 1
             for class_data in agg_data[module]:
                 base_class = class_data['Class']
@@ -280,7 +280,7 @@ class WriteInExcel:
             use_case_cell = '{}{}'.format(use_case_column_letter, 1)
             logging.debug("Use Case cell is {}".format(use_case_cell))
             ws[use_case_cell] = use_case
-            # adjust the width of all columns
+        # adjust the width of all columns
         col_counter = 1
         for _ in ws.columns:
             if col_counter > skip_cols:
@@ -297,12 +297,17 @@ class WriteInExcel:
                     col_counter)].hidden = True
             ws.column_dimensions[get_column_letter(col_counter)].width = 3
             col_counter += 1
-        # give bold font to cells with Classes
+        # give bold font to cells with Classes, to classless functions, and, to all modules
         classes_column = get_column_letter(skip_cols+3)
         font = Font(bold=True)
+        values_to_be_bold = set()
+        for module in classes.keys():
+            values_to_be_bold.add('{} (module)'.format(module))
+            for class_ in classes[module]:
+                values_to_be_bold.add(class_)
         for row in range(2, ws.max_row+1):
             if ws['{}{}'.format(classes_column, row)].value:
-                if ws['{}{}'.format(classes_column, row)].value in classes:
+                if ws['{}{}'.format(classes_column, row)].value in values_to_be_bold:
                     ws['{}{}'.format(classes_column, row)].font = font
                 else:
                     logging.debug("Hiding this row: {}".format(row))
