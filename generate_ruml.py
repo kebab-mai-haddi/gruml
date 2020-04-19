@@ -123,7 +123,7 @@ class GRUML:
                 else:
                     files[class_data.file] = [
                         {'class': name, 'start_line': class_data.lineno, 'end_line': class_data.end_lineno}]
-                class_index[module][name] = counter
+                class_index[module][name] = len(agg_data[module])-1
                 counter += 1
                 self.classes_covered[module][name] = 1
         logging.debug(' ---------------------------------- ')
@@ -157,17 +157,40 @@ class GRUML:
                             _class, key_error
                         )
                     )
+        # extract intra-file dependencies
+        for file_ in files.keys():
+            with open(file_) as f:
+                data = f.read()
+                module = ast.parse(data)
+                classes = [obj for obj in module.body if isinstance(
+                    obj, ast.ClassDef)]
+                class_names = [obj.name for obj in classes]
+                dependencies = {name: [] for name in class_names}
+                for class_ in classes:
+                    for node in ast.walk(class_):
+                        if isinstance(node, ast.Call):
+                            if isinstance(node.func, ast.Name):
+                                if node.func.id != class_.name and node.func.id in class_names:
+                                    dependencies[class_.name].append(
+                                        node.func.id)
+            module_name = file_.split('/')[-1].split('.py')[0]
+            for class_name, dependency in dependencies.items():
+                for dependee_class in dependency:
+                    agg_data[module_name][class_index[module_name][dependee_class]]['Dependents'].append(
+                        {'module': module_name, 'class': class_name})
+
         self.skip_cols = 0
-        parents_set = set()
-        dependees_set = set()
+        parents_or_dependees_set = set()
         for module in agg_data.keys():
             for class_ in agg_data[module]:
                 if class_['Dependents']:
-                    dependees_set.add('{}.{}'.format(module, class_['Class']))
+                    parents_or_dependees_set.add(
+                        '{}.{}'.format(module, class_['Class']))
                 if class_['Parents']:
                     for parent in class_['Parents']:
-                        parents_set.add('{}.{}'.format(parent['parent_module'], parent['parent_class']))
-        self.skip_cols = len(parents_set) + len(dependees_set)
+                        parents_or_dependees_set.add('{}.{}'.format(
+                            parent['parent_module'], parent['parent_class']))
+        self.skip_cols = len(parents_or_dependees_set)
         # The whole data is now collected and we need to form the dataframe of it:
         self.write_in_excel = WriteInExcel(file_name='Dependency_2.xlsx')
         self.df = self.write_in_excel.create_pandas_dataframe(
