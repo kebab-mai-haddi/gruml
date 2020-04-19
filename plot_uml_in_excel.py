@@ -54,7 +54,7 @@ class WriteInExcel:
         columns = ['' for _ in range(skip_cols+2)]
         df = pd.DataFrame(
             index=np.arange(0, number_of_rows),
-            columns=columns+['Class']
+            columns=columns+['Module', 'Class/Functions', 'Methods']
         )
         row_counter = 0
         column_counter = skip_cols-1
@@ -70,7 +70,7 @@ class WriteInExcel:
         for module in agg_data.keys():
             logging.debug(
                 "Currently framing df with module: {}".format(module))
-            df.loc[row_counter] = columns + ['{} (module)'.format(module)]
+            df.loc[row_counter] = columns + ['{}'.format(module), '', '']
             row_counter += 1
             for class_data in agg_data[module]:
                 base_class = class_data['Class']
@@ -79,14 +79,14 @@ class WriteInExcel:
                 parents = class_data['Parents']
                 dependents = class_data['Dependents']
                 columns = ['' for _ in range(skip_cols+2)]
-                df.loc[row_counter] = columns + [base_class]
+                df.loc[row_counter] = columns + ['', base_class, '']
                 row_counter += 1
                 for method in methods:
                     # logging.debug('Inserting method: {} of class: {} at row: {} and column: {}'.format(
                         # method, base_class, row_counter, skip_cols+1))
-                    df.iloc[row_counter, skip_cols+2] = method
+                    df.iloc[row_counter, skip_cols+4] = method
                     self.class_row_mapping[module][base_class][1][method] = (
-                        row_counter, skip_cols+2)
+                        row_counter, skip_cols+4)
                     row_counter += 1
                 if parents:
                     for parent in parents:
@@ -99,7 +99,6 @@ class WriteInExcel:
                             {'dependent_module': dependent['module'],
                                 'dependent_class': dependent['class']}
                         )
-
         # get a single list of dependees and parents so as to draw a common vertical pipe
         dependees_and_parents_combined = defaultdict(set)
         for dependee_module in dependee_to_dependents_mapping.keys():
@@ -144,7 +143,8 @@ class WriteInExcel:
                 column_counter -= 1
         # convert all NaN to None.
         df = df.replace(np.nan, '', regex=True)
-        # logging.debug("Create DF was called.")
+        # logging.debug(
+        #     "Create DF was called with skip columns as: {}".format(skip_cols))
         # logging.debug(df)
         return df
 
@@ -286,7 +286,10 @@ class WriteInExcel:
             if col_counter > skip_cols:
                 if col_counter == skip_cols+3:
                     ws.column_dimensions[get_column_letter(
-                        col_counter)].width = 36
+                        col_counter)].width = 6
+                elif col_counter > skip_cols+3:
+                    ws.column_dimensions[get_column_letter(
+                        col_counter)].width = 24
                 else:
                     ws.column_dimensions[get_column_letter(
                         col_counter)].width = 3
@@ -298,20 +301,22 @@ class WriteInExcel:
             ws.column_dimensions[get_column_letter(col_counter)].width = 3
             col_counter += 1
         # give bold font to cells with Classes, to classless functions, and, to all modules
-        classes_column = get_column_letter(skip_cols+3)
+        modules_column = get_column_letter(skip_cols+3)
+        classes_column = get_column_letter(skip_cols+4)
         font = Font(bold=True)
         values_to_be_bold = set()
         for module in classes.keys():
-            values_to_be_bold.add('{} (module)'.format(module))
+            values_to_be_bold.add('{}'.format(module))
             for class_ in classes[module]:
                 values_to_be_bold.add(class_)
         for row in range(2, ws.max_row+1):
             if ws['{}{}'.format(classes_column, row)].value:
-                if ws['{}{}'.format(classes_column, row)].value in values_to_be_bold:
-                    ws['{}{}'.format(classes_column, row)].font = font
-                else:
-                    logging.debug("Hiding this row: {}".format(row))
-                    ws.row_dimensions[row].hidden = True
+                ws['{}{}'.format(classes_column, row)].font = font
+            elif ws['{}{}'.format(modules_column, row)].value:
+                ws['{}{}'.format(modules_column, row)].font = font
+            else:
+                logging.debug("Hiding this row: {}".format(row))
+                ws.row_dimensions[row].hidden = True
         # show the Class row when use-cases are there.
         if use_case:
             ws.row_dimensions[2].hidden = False
