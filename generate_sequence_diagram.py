@@ -12,3 +12,4 @@ class GenerateSequenceDiagram:
         self.driver_path = driver_path
         self.driver_module = driver_module
         sys.path.insert(1, source_code_to_study_dir)
+        print(sys.path)
