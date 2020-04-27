@@ -148,7 +148,7 @@ class WriteInExcel:
         # logging.debug(df)
         return df
 
-    def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case, driver_function):
+    def integrate_sequence_diagram_in_df(self, df, function_sequence, use_case, driver_function, skip_cols):
         """integrates sequence diagram in the dataframe.
 
         Arguments:
@@ -173,21 +173,32 @@ class WriteInExcel:
             logging.debug("Event is: {}".format(event))
             caller, callee = event
             logging.debug("caller is: {}".format(caller))
-            if caller == driver_function:
-                continue
-            caller_class, caller_function = caller.split('.')
-            logging.debug("Caller class is: {}, caller function is: {}".format(
-                caller_class, caller_function))
-            callee_class, callee_function = callee.split('.')
-            logging.debug("Callee class is: {}, callee function is: {}".format(
-                callee_class, callee_function
-            ))
-            if caller_class not in self.class_row_mapping or callee_class not in self.class_row_mapping:
-                continue
-            caller_row_number, caller_column_number = self.class_row_mapping[
-                caller_class][1][caller_function]
-            callee_row_number, callee_column_number = self.class_row_mapping[
-                callee_class][1][callee_function]
+            logging.debug("callee is: {}".format(callee))
+            caller_module = caller[0]
+            if "." in caller[1]:
+                caller_class, caller_function = caller[1].split('.')
+                caller_row_number, caller_column_number = self.class_row_mapping[
+                    caller_module][caller_class][1][caller_function]
+            else:
+                caller_class = caller[1]
+                logging.debug(
+                    self.class_row_mapping[caller_module][caller_class][0])
+                caller_row_number, caller_column_number = self.class_row_mapping[
+                    caller_module][caller_class][0], skip_cols+4
+            callee_module = callee[0]
+            if "." in callee[1]:
+                callee_class, callee_function = callee[1].split('.')
+                logging.debug("caller module is: {}, callee class is: {}, and callee function is: {}".format(callee_module, callee_class, callee_function))
+                logging.debug(
+                    self.class_row_mapping[callee_module][callee_class])
+                callee_row_number, callee_column_number = self.class_row_mapping[
+                    callee_module][callee_class][1][callee_function]
+            else:
+                callee_class = callee[1]
+                logging.debug(
+                    self.class_row_mapping[callee_module][callee_class])
+                callee_row_number, callee_column_number = self.class_row_mapping[
+                    callee_module][callee_class][0], skip_cols+4
             caller_column_number, callee_column_number = number_of_columns_pre_sequence + \
                 event_counter - 1, number_of_columns_pre_sequence + event_counter - 1
             self.dark_edges_column[caller_column_number].extend(
@@ -202,6 +213,7 @@ class WriteInExcel:
                 df.iloc[callee_row_number, callee_column_number] = "←"
             event_counter += 1
         df = df.replace(np.nan, '', regex=True)
+        logging.debug(df)
         return df
 
     def write_df_to_excel(self, df, sheet_name, skip_cols, classes={}, use_case=None):
