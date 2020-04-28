@@ -188,7 +188,8 @@ class WriteInExcel:
             callee_module = callee[0]
             if "." in callee[1]:
                 callee_class, callee_function = callee[1].split('.')
-                logging.debug("caller module is: {}, callee class is: {}, and callee function is: {}".format(callee_module, callee_class, callee_function))
+                logging.debug("caller module is: {}, callee class is: {}, and callee function is: {}".format(
+                    callee_module, callee_class, callee_function))
                 logging.debug(
                     self.class_row_mapping[callee_module][callee_class])
                 callee_row_number, callee_column_number = self.class_row_mapping[
