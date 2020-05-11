@@ -1,5 +1,6 @@
 import importlib
 import logging
+import os
 import sys
 from trace import Trace
 
@@ -12,4 +13,5 @@ class GenerateSequenceDiagram:
         self.driver_path = driver_path
         self.driver_module = driver_module
         sys.path.insert(1, source_code_to_study_dir)
+        sys.path.insert(2, os.getcwd())
         print(sys.path)

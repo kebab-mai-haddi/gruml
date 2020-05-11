@@ -1,12 +1,15 @@
+import argparse
 import ast
 import importlib
 import logging
 import os
 import pyclbr
+import shutil
 import sys
 from collections import defaultdict
 from trace import Trace
 
+import git
 import pandas as pd
 
 from dependency_collector import ModuleUseCollector
@@ -29,12 +32,17 @@ class GRUML:
         self.test = test
         self.use_case = True
         self.class_object_mapping = defaultdict(dict)
+        global foo
+        self.foo = foo
 
-    def get_source_code_path_and_modules(self):
+    def get_source_code_path_and_modules(self, source_code_path):
         """input source code that is to be studied and compute all
         modules inside it.
         """
-        self.source_code_path = [input('Please enter the source code path \n')]
+        self.source_code_path = [source_code_path]
+        cwd = os.getcwd()
+        # os.chdir(self.source_code_path)
+        root_dir = os.path.basename(os.path.normpath(self.source_code_path[0]))
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             for file in filenames:
                 if file.endswith(".py"):
@@ -43,30 +51,24 @@ class GRUML:
                     file = os.path.join(
                         rel_dir, file) if rel_dir != '.' else file
                     file = file.split(".py")[0]
-                    self.source_code_modules += [file]
+                    if file.startswith(root_dir):
+                        file = file.split(root_dir)[-1]
+                    self.source_code_modules += [file.replace('/', '.')]
+        os.chdir(cwd)
 
-    def get_driver_path_and_driver_name(self):
+    def get_driver_path_and_driver_name(self, use_case, driver_name, driver_path, driver_function):
         """ask for driver path and driver module's  name.
 
         Returns:
             str, str, str, str -- returns use case, driver path, driver name, driver function.
         """
-        use_case = input(
-            'Please enter the use case or enter "N" if you want to skip use-case diagram generation: \n'
-        )
-        if use_case == 'N':
+        if not use_case:
             self.use_case = False
             return
         self.use_case = use_case
-        self.driver_path = input(
-            'Please enter the driver path: \n'
-        )
-        self.driver_name = input(
-            'Please enter the driver name: \n'
-        )
-        self.driver_function = input(
-            'Please enter the driver function name: \n'
-        )
+        self.driver_name = driver_name
+        self.driver_path = os.path.join(self.source_code_path[0], driver_path)
+        self.driver_function = driver_function
 
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
@@ -90,7 +92,6 @@ class GRUML:
                 # don't cover classes that are not in the source code modules
                 if class_data.module not in self.source_code_modules:
                     continue
-
                 self.class_object_mapping[class_data.module]['{}'.format(
                     class_data.name)] = class_data
                 methods = []
@@ -210,6 +211,7 @@ class GRUML:
         spec = importlib.util.spec_from_file_location(
             self.driver_name, self.driver_path)
         global foo
+        foo = self.foo
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
         tracer = Trace(countfuncs=1, countcallers=1, timing=1)
@@ -236,15 +238,87 @@ class GRUML:
             self.df, 'sheet_one', self.skip_cols, self.classes_covered, self.use_case)
 
 
-def main():
+def gruml(source_code_path, **kwargs):
     """driver function of GRUML.
     """
     gruml = GRUML()
-    gruml.get_source_code_path_and_modules()
-    gruml.get_driver_path_and_driver_name()
+    print('Generating RUML for source code at: {}'.format(source_code_path))
+    gruml.get_source_code_path_and_modules(source_code_path)
+    gruml.get_driver_path_and_driver_name(
+        kwargs.get('use_case', None),
+        kwargs.get('driver_name', None),
+        kwargs.get('driver_path', None),
+        kwargs.get('driver_function', None),
+    )
     gruml.generate_dependency_data()
-    if gruml.use_case is not False:
+    if gruml.use_case:
         gruml.generate_sequential_function_calls()
 
 
-main()
+# kwargs = {
+#     'use_case':'test_cli',
+#     'driver_name':'driver',
+#     'driver_path': 'driver.py',
+#     'driver_function': 'main_2'
+# }
+
+# gruml('/tmp/python3-class-inheritance-dependency-example/python3-class-inheritance-dependency-example', **kwargs)
+
+
+def download_source_code(git_url):
+    try:
+        root_dir = git_url.split('.git')[0].split('/')[-1]
+        directory_path = '/tmp/{}'.format(root_dir)
+        try:
+            os.makedirs(directory_path)
+        except OSError:
+            shutil.rmtree(directory_path)
+            os.makedirs(directory_path)
+        git_repo = git.Git(directory_path).clone(git_url)
+        print('Git repo is successfully downloaded: {}'.format(git_repo))
+    except Exception as e:
+        raise ValueError(e)
+    return os.path.join(directory_path, root_dir)
+
+
+def call_generate_ruml(source_code_link, **kwargs):
+    """call gruml function, assume that if use_case is given, all other related 
+    arguments will be present, so checking for them can be skipped in here.
+
+    Arguments:
+        source_code_link {[type]} -- [description]
+    """
+    source_code_dir = download_source_code(source_code_link)
+    gruml(
+        source_code_dir,
+        **kwargs
+    )
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("github_repository", type=str,
+                    help="generate RUML for the given Github repository which contains the source code")
+parser.add_argument("-u", "--use_case", type=str,
+                    help="generate use case for the source code")
+parser.add_argument("-d", "--driver_name", type=str,
+                    help="name of the driver module for the given use case")
+parser.add_argument("-dp", "--driver_path", type=str,
+                    help="file path of the driver module for the given use case")
+parser.add_argument('-df', '--driver_function', type=str,
+                    help="function name to be executed for the given use case")
+
+args = parser.parse_args()
+source_code_link = args.github_repository
+if args.use_case:
+    if not args.driver_name or not args.driver_path or not args.driver_function:
+        raise ValueError(
+            'Use case set to be true but driver details not provided. Please type "python3 gruml-cli.py --help for details."')
+    else:
+        use_case = args.use_case
+        driver_name = args.driver_name
+        driver_path = args.driver_path
+        driver_function = args.driver_function
+    call_generate_ruml(source_code_link, use_case=use_case,
+                       driver_name=driver_name, driver_path=driver_path, driver_function=driver_function)
+else:
+    call_generate_ruml(source_code_link)
