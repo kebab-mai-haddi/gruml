@@ -39,7 +39,7 @@ def upload_file_to_google_drive(path):
 
     file_metadata = {'name': path}
     media = MediaFileUpload(path, mimetype='*/*')
-    service = build('drive', 'v3', credentials=creds)
+    service = build('drive', 'v3', credentials=creds, cache_discovery=False)
     file = service.files().create(body=file_metadata,
                                   media_body=media).execute()
 
@@ -64,6 +64,4 @@ def upload_file_to_google_drive(path):
         fields='id',
     ))
     batch.execute()
-    print(file)
-
-
+    return file_url
