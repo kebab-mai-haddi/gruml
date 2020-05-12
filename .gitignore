@@ -5,3 +5,5 @@ env_list_classes/
 __pycache__
 *.xlsx
 token.pickle
+credentials.json
+client_secret.json
