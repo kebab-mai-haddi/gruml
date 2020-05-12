@@ -16,6 +16,7 @@ from dependency_collector import ModuleUseCollector
 from generate_hierarchy import GenerateHierarchy
 from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
+from utils_google_drive import upload_file_to_google_drive
 
 foo = None
 
@@ -253,16 +254,6 @@ def gruml(source_code_path, **kwargs):
     gruml.generate_dependency_data()
     if gruml.use_case:
         gruml.generate_sequential_function_calls()
-
-
-# kwargs = {
-#     'use_case':'test_cli',
-#     'driver_name':'driver',
-#     'driver_path': 'driver.py',
-#     'driver_function': 'main_2'
-# }
-
-# gruml('/tmp/python3-class-inheritance-dependency-example/python3-class-inheritance-dependency-example', **kwargs)
 
 
 def download_source_code(git_url):
