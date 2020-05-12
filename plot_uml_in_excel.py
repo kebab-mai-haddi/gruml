@@ -1,3 +1,4 @@
+from utils_google_drive import upload_file_to_google_drive
 import logging
 from collections import defaultdict
 
@@ -83,7 +84,7 @@ class WriteInExcel:
                 row_counter += 1
                 for method in methods:
                     # logging.debug('Inserting method: {} of class: {} at row: {} and column: {}'.format(
-                        # method, base_class, row_counter, skip_cols+1))
+                    # method, base_class, row_counter, skip_cols+1))
                     df.iloc[row_counter, skip_cols+4] = method
                     self.class_row_mapping[module][base_class][1][method] = (
                         row_counter, skip_cols+4)
@@ -335,3 +336,6 @@ class WriteInExcel:
             ws.row_dimensions[2].hidden = False
         wb.save(self.file_name)
         logging.debug("{}:{} done!".format(self.file_name, sheet_name))
+        logging.debug("Uploading to google drive with the link: ")
+        file_url = upload_file_to_google_drive(self.file_name)
+        logging.debug('File URL: {}'.format(file_url))
