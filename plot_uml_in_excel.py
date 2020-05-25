@@ -7,8 +7,9 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+import os
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class WriteInExcel:
@@ -334,8 +335,10 @@ class WriteInExcel:
         # show the Class row when use-cases are there.
         if use_case:
             ws.row_dimensions[2].hidden = False
+        logging.info('Current directory and file name is:')
+        logging.info('{}, {}'.format(os.getcwd(), self.file_name))
         wb.save(self.file_name)
         logging.debug("{}:{} done!".format(self.file_name, sheet_name))
-        logging.debug("Uploading to google drive with the link: ")
-        file_url = upload_file_to_google_drive(self.file_name)
-        logging.debug('File URL: {}'.format(file_url))
+        logging.info("Run the following command to get this file: ")
+        logging.info("docker cp {}:/{} .".format('gruml',
+                                                 os.path.abspath(self.file_name)))
