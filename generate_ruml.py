@@ -52,8 +52,8 @@ class GRUML:
                     file = os.path.join(
                         rel_dir, file) if rel_dir != '.' else file
                     file = file.split(".py")[0]
-                    if file.startswith(root_dir):
-                        file = file.split(root_dir)[-1]
+                    # if file.startswith(root_dir):
+                    #     file = file.split(root_dir)[-1]
                     self.source_code_modules += [file.replace('/', '.')]
         os.chdir(cwd)
 
@@ -103,8 +103,6 @@ class GRUML:
                 # don't cover classes that are not in the source code modules
                 if class_data.module not in self.source_code_modules:
                     continue
-                self.class_object_mapping[class_data.module]['{}'.format(
-                    class_data.name)] = class_data
                 methods = []
                 parents = []
                 if isinstance(class_data, pyclbr.Class):
