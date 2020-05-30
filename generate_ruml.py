@@ -81,6 +81,16 @@ class GRUML:
         # to check if a class has already been covered due to some import in another file.
         self.classes_covered = defaultdict(lambda: defaultdict(int))
         for source_code_module in self.source_code_modules:
+            source_code_module, source_code_path = os.path.basename(source_code_module), [os.path.join(
+                self.source_code_path[0], os.path.dirname(source_code_module))]
+            source_code_data = pyclbr.readmodule_ex(
+                source_code_module, path=source_code_path)
+            for name, class_data in source_code_data.items():
+                if class_data.module not in self.source_code_modules:
+                    continue
+                self.class_object_mapping[class_data.module]['{}'.format(
+                    class_data.name)] = class_data
+        for source_code_module in self.source_code_modules:
             counter = 0
             source_code_module, source_code_path = os.path.basename(source_code_module), [os.path.join(
                 self.source_code_path[0], os.path.dirname(source_code_module))]
