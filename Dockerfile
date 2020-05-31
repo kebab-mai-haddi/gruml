@@ -19,6 +19,6 @@ RUN pip3 install -r requirements.txt
 
 # Change pyclbr
 RUN rm /usr/lib/python3.8/pyclbr.py
-COPY ./pyclbr.py /usr/lib/python3.8/pyclbr.py
+COPY ./pyclbr /usr/lib/python3.8/pyclbr.py
 # Keep running the container
 CMD tail -f /dev/null
