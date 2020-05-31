@@ -159,7 +159,8 @@ class GRUML:
                                     '/')[-1].split('.py')[0]
                                 agg_data[module][class_index[module][_class]]['Dependents'].append(
                                     {'module': dependent_module, 'class': class_['class']})
-                except AttributeError:
+                except AttributeError as ae:
+                    logging.error(ae)
                     pass
                 except KeyError as key_error:
                     logging.debug(
