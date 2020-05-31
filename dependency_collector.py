@@ -25,9 +25,9 @@ class ModuleUseCollector(ast.NodeVisitor):
         self.scopes = ChainMap()
         self.used_at = []  # list of (name, alias, line) entries
 
-    def visit_FunctionDef(self, node):
+    def visit_Function(self, node):
         """visit the function's definition for tracing usage.
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
@@ -37,7 +37,7 @@ class ModuleUseCollector(ast.NodeVisitor):
 
     def visit_Lambda(self, node):
         """visit lambda type of functions' usage.
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
@@ -49,18 +49,18 @@ class ModuleUseCollector(ast.NodeVisitor):
         the class attributes. By using a read-only dict proxy here this code
         we can expect an exception when a class body contains an import
         statement or uses names that'd mask an imported name.
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
-        # 
+        #
         self.scopes = self.scopes.new_child(readonlydict({}))
         self.generic_visit(node)
         self.scopes = self.scopes.parents
 
     def visit_Import(self, node):
         """visit import declarations
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
@@ -72,7 +72,7 @@ class ModuleUseCollector(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node):
         """resolve relative imports; from . import <name>, from ..<name> import <name>
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
@@ -99,7 +99,7 @@ class ModuleUseCollector(ast.NodeVisitor):
 
     def visit_Name(self, node):
         """ #TODO
-        
+
         Arguments:
             node {str} -- name of the node where we want to check the usage.
         """
