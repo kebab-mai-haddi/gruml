@@ -20,14 +20,14 @@ from utils_google_drive import upload_file_to_google_drive
 
 foo = None
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 
 
 class GRUML:
 
     def __init__(self, test=False):
         self.source_code_path = []
-        self.source_code_modules = []
+        self.source_code_modules = {}
         self.driver_path = None
         self.driver_name = None
         self.test = test
@@ -35,27 +35,22 @@ class GRUML:
         self.class_object_mapping = defaultdict(dict)
         global foo
         self.foo = foo
+        self.sys_path_folders = set()
 
     def get_source_code_path_and_modules(self, source_code_path):
         """input source code that is to be studied and compute all
         modules inside it.
         """
         self.source_code_path = [source_code_path]
-        cwd = os.getcwd()
-        # os.chdir(self.source_code_path)
-        root_dir = os.path.basename(os.path.normpath(self.source_code_path[0]))
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             for file in filenames:
                 if file.endswith(".py"):
                     rel_dir = os.path.relpath(
                         dirpath, self.source_code_path[0])
-                    file = os.path.join(
+                    module = os.path.join(
                         rel_dir, file) if rel_dir != '.' else file
-                    file = file.split(".py")[0]
-                    # if file.startswith(root_dir):
-                    #     file = file.split(root_dir)[-1]
-                    self.source_code_modules += [file.replace('/', '.')]
-        os.chdir(cwd)
+                    module = module.split(".py")[0].replace('/', '.')
+                    self.source_code_modules[module] = rel_dir if rel_dir != '.' else ''
 
     def get_driver_path_and_driver_name(self, use_case, driver_name, driver_path, driver_function):
         """ask for driver path and driver module's  name.
@@ -74,6 +69,7 @@ class GRUML:
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
         """
+        # _ = GenerateSequenceDiagram(self.source_code_path[0])
         agg_data = defaultdict(list)
         # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
         files = {}
@@ -81,26 +77,43 @@ class GRUML:
         # to check if a class has already been covered due to some import in another file.
         self.classes_covered = defaultdict(lambda: defaultdict(int))
         for source_code_module in self.source_code_modules:
-            source_code_module, source_code_path = os.path.basename(source_code_module), [os.path.join(
-                self.source_code_path[0], os.path.dirname(source_code_module))]
+            source_code_path = [os.path.join(
+                self.source_code_path[0], self.source_code_modules[source_code_module])]
+            source_code_module = source_code_module.split('.')[-1]
+            logging.debug(
+                'Source code module: {}, Source code path: {}'.format(
+                    source_code_module, source_code_path)
+            )
             source_code_data = pyclbr.readmodule_ex(
                 source_code_module, path=source_code_path)
             for name, class_data in source_code_data.items():
+                if name == '__path__':
+                    continue
+                # if class_data.module == 'pickle':
+                #     print('Caught an outsider')
                 if class_data.module not in self.source_code_modules:
                     continue
                 self.class_object_mapping[class_data.module]['{}'.format(
                     class_data.name)] = class_data
+        logging.debug(
+            'Class: Object indexing created successfully!'
+        )
         for source_code_module in self.source_code_modules:
             counter = 0
-            source_code_module, source_code_path = os.path.basename(source_code_module), [os.path.join(
-                self.source_code_path[0], os.path.dirname(source_code_module))]
-            # source_code_data = pyclbr.readmodule(
-            #     source_code_module, path=source_code_path)
+            source_code_path = [os.path.join(
+                self.source_code_path[0], self.source_code_modules[source_code_module])]
+            source_code_module = source_code_module.split('.')[-1]
+            logging.debug(
+                'Source code module: {}, Source code path: {}'.format(
+                    source_code_module, source_code_path)
+            )
             source_code_data = pyclbr.readmodule_ex(
                 source_code_module, path=source_code_path)
             generate_hierarchy = GenerateHierarchy()
             for name, class_data in source_code_data.items():
                 # don't cover classes that are not in the source code modules
+                if name == '__path__':
+                    continue
                 if class_data.module not in self.source_code_modules:
                     continue
                 methods = []
@@ -116,6 +129,8 @@ class GRUML:
                 if module in self.classes_covered:
                     if self.classes_covered[module].get(name):
                         continue
+                if module == 'pickle':
+                    print('here')
                 agg_data[module].append(
                     {
                         "Class": name,
@@ -139,9 +154,14 @@ class GRUML:
         logging.debug(' ---------------------------------- ')
         for _ in range(20):
             print('\n')
+        logging.debug('Checking whether pickle is in agg_data')
+        logging.debug(agg_data.get('pickle', 'Not in agg_data'))
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
-            module = file_.split('/')[-1].split('.py')[0]
+            module = file_.replace(
+                '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
+            if module not in self.source_code_modules:
+                continue
             for j in files.keys():
                 try:
                     source = open(j).read()
@@ -157,8 +177,27 @@ class GRUML:
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
                                 dependent_module = j.split(
                                     '/')[-1].split('.py')[0]
-                                agg_data[module][class_index[module][_class]]['Dependents'].append(
-                                    {'module': dependent_module, 'class': class_['class']})
+                                try:
+                                    agg_data[module][class_index[module][_class]]['Dependents'].append(
+                                        {'module': dependent_module, 'class': class_['class']})
+                                except IndexError:
+                                    logging.debug(
+                                        'agg_data for the module: {} is: {}'.format(
+                                            module, agg_data[module])
+                                    )
+                                    logging.debug(
+                                        'class_index of this class is: {}'.format(
+                                            class_index[module][_class])
+                                    )
+                                    logging.debug(
+                                        'Checking whether pickle module is in source code modules: '
+                                    )
+                                    logging.debug(
+                                        self.source_code_modules.get(
+                                            module, 'Not here')
+                                    )
+                                    raise IndexError
+
                 except AttributeError as ae:
                     logging.error(ae)
                     pass
@@ -170,6 +209,10 @@ class GRUML:
                     )
         # extract intra-file dependencies
         for file_ in files.keys():
+            module_name = file_.replace(
+                '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
+            if module not in self.source_code_modules:
+                continue
             with open(file_) as f:
                 data = f.read()
                 module = ast.parse(data)
@@ -184,7 +227,8 @@ class GRUML:
                                 if node.func.id != class_.name and node.func.id in class_names:
                                     dependencies[class_.name].append(
                                         node.func.id)
-            module_name = file_.split('/')[-1].split('.py')[0]
+            logging.debug(
+                'Currently debugging the module: {}'.format(module_name))
             for class_name, dependency in dependencies.items():
                 for dependee_class in dependency:
                     agg_data[module_name][class_index[module_name][dependee_class]]['Dependents'].append(
@@ -269,6 +313,8 @@ def download_source_code(git_url):
     try:
         root_dir = git_url.split('.git')[0].split('/')[-1]
         directory_path = '/tmp/{}'.format(root_dir)
+        from os import listdir
+        from os.path import isfile, join
         try:
             os.makedirs(directory_path)
         except OSError:
@@ -278,6 +324,7 @@ def download_source_code(git_url):
         print('Git repo is successfully downloaded: {}'.format(git_repo))
     except Exception as e:
         raise ValueError(e)
+    onlyfiles = [f for f in listdir(os.path.join(directory_path, root_dir))]
     return os.path.join(directory_path, root_dir)
 
 
