@@ -66,6 +66,8 @@ class GenerateHierarchy:
                             break
                     if found:
                         break
+                if not found:  # the parent class is not in the source code base, it is imported.
+                    continue
             super_class_names.append(
                 {
                     'parent_module': super_class.module,
