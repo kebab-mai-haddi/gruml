@@ -65,6 +65,8 @@ class GRUML:
         self.driver_name = driver_name
         self.driver_path = os.path.join(self.source_code_path[0], driver_path)
         self.driver_function = driver_function
+        _ = GenerateSequenceDiagram(
+            self.driver_path, self.driver_name, self.source_code_path[0])
 
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
@@ -260,8 +262,8 @@ class GRUML:
         for tracing source code and plotting sequence diagram.
         """
         # generating sequence diagram for a use-case
-        _ = GenerateSequenceDiagram(
-            self.driver_path, self.driver_name, self.source_code_path[0])
+        # _ = GenerateSequenceDiagram(
+        #     self.driver_path, self.driver_name, self.source_code_path[0])
         spec = importlib.util.spec_from_file_location(
             self.driver_name, self.driver_path)
         global foo
