@@ -66,7 +66,7 @@ class GRUML:
         self.driver_path = os.path.join(self.source_code_path[0], driver_path)
         self.driver_function = driver_function
         _ = GenerateSequenceDiagram(
-            self.driver_path, self.driver_name, self.source_code_path[0])
+            self.source_code_path[0], self.driver_path, self.driver_name)
 
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
