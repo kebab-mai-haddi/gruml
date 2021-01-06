@@ -1,4 +1,3 @@
-# /usr/local/Cellar/python/3.7.4_1/Frameworks/Python.framework/Versions/3.7/lib/python3.7/pyclbr.py
 """Parse a Python module and describe its classes and functions.
 
 Parse enough of a Python file to recognize imports and class and
@@ -22,6 +21,7 @@ has the following attributes:
     name    -- name of the object;
     file    -- file in which the object is defined;
     lineno  -- line in the file where the object's definition starts;
+    end_lineno -- line in the file where the object's definition ends;
     parent  -- parent of this object, if any;
     children -- nested objects contained in this object.
 The 'children' attribute is a dictionary mapping names to objects.
@@ -51,8 +51,7 @@ _modules = {}  # Initialize cache of modules we've seen.
 
 
 class _Object:
-    "Informaton about Python class or function."
-
+    "Information about Python class or function."
     def __init__(self, module, name, file, lineno, parent):
         self.module = module
         self.name = name
@@ -67,14 +66,12 @@ class _Object:
 
 class Function(_Object):
     "Information about a Python function, including methods."
-
     def __init__(self, module, name, file, lineno, parent=None):
         _Object.__init__(self, module, name, file, lineno, parent)
 
 
 class Class(_Object):
     "Information about a Python class."
-
     def __init__(self, module, name, super, file, lineno, parent=None):
         _Object.__init__(self, module, name, file, lineno, parent)
         self.super = [] if super is None else super
@@ -82,20 +79,6 @@ class Class(_Object):
 
     def _addmethod(self, name, lineno):
         self.methods[name] = lineno
-
-
-class Stack(list):
-
-    def __init__(self):
-        import inspect
-        super().__init__()
-
-    def __delitem__(self, key):
-        import inspect
-        frames = inspect.stack()
-        setattr(self[key][0], 'end_lineno',
-                frames[1].frame.f_locals['start'][0] - 1)
-        super().__delitem__(key)
 
 
 def _nest_function(ob, func_name, lineno):
@@ -106,25 +89,23 @@ def _nest_function(ob, func_name, lineno):
         ob._addmethod(func_name, lineno)
     return newfunc
 
-
 def _nest_class(ob, class_name, lineno, super=None):
     "Return a Class after nesting within ob."
     newclass = Class(ob.module, class_name, super, ob.file, lineno, ob)
     ob._addchild(class_name, newclass)
     return newclass
 
-
 def readmodule(module, path=None):
     """Return Class objects for the top-level classes in module.
 
     This is the original interface, before Functions were added.
     """
+
     res = {}
     for key, value in _readmodule(module, path or []).items():
         if isinstance(value, Class):
             res[key] = value
     return res
-
 
 def readmodule_ex(module, path=None):
     """Return a dictionary with all functions and classes in module.
@@ -134,7 +115,6 @@ def readmodule_ex(module, path=None):
     Do this by reading source, without importing (and executing) it.
     """
     return _readmodule(module, path or [])
-
 
 def _readmodule(module, path, inpackage=None):
     """Do the hard work for readmodule[_ex].
@@ -181,17 +161,20 @@ def _readmodule(module, path, inpackage=None):
     else:
         search_path = path + sys.path
     spec = importlib.util._find_spec_from_path(fullmodule, search_path)
+    if spec is None:
+        raise ModuleNotFoundError(f"no module named {fullmodule!r}", name=fullmodule)
     _modules[fullmodule] = tree
     # Is module a package?
     if spec.submodule_search_locations is not None:
         tree['__path__'] = spec.submodule_search_locations
     try:
         source = spec.loader.get_source(fullmodule)
-        if source is None:
-            return tree
     except (AttributeError, ImportError):
         # If module is not Python source, we cannot do anything.
         return tree
+    else:
+        if source is None:
+            return tree
 
     fname = spec.loader.get_filename(fullmodule)
     return _create_tree(fullmodule, path, fname, source, tree, inpackage)
@@ -211,8 +194,7 @@ def _create_tree(fullmodule, path, fname, source, tree, inpackage):
     """
     f = io.StringIO(source)
 
-    # stack = []  # Initialize stack of (class, indent) pairs.
-    stack = Stack()  # changing the source code so as to get the ending line
+    stack = [] # Initialize stack of (class, indent) pairs.
 
     g = tokenize.generate_tokens(f.readline)
     try:
@@ -221,11 +203,13 @@ def _create_tree(fullmodule, path, fname, source, tree, inpackage):
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
                 while stack and stack[-1][1] >= thisindent:
+                    stack[-1][0].end_lineno = start[0] - 1
                     del stack[-1]
             elif token == 'def':
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
                 while stack and stack[-1][1] >= thisindent:
+                    stack[-1][0].end_lineno = start[0] - 1
                     del stack[-1]
                 tokentype, func_name, start = next(g)[0:3]
                 if tokentype != NAME:
@@ -243,17 +227,18 @@ def _create_tree(fullmodule, path, fname, source, tree, inpackage):
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
                 while stack and stack[-1][1] >= thisindent:
+                    stack[-1][0].end_lineno = start[0] - 1
                     del stack[-1]
                 tokentype, class_name, start = next(g)[0:3]
                 if tokentype != NAME:
-                    continue  # Skip class with syntax error.
+                    continue # Skip class with syntax error.
                 # Parse what follows the class name.
                 tokentype, token, start = next(g)[0:3]
                 inherit = None
                 if token == '(':
-                    names = []  # Initialize list of superclasses.
+                    names = [] # Initialize list of superclasses.
                     level = 1
-                    super = []  # Tokens making up current superclass.
+                    super = [] # Tokens making up current superclass.
                     while True:
                         tokentype, token, start = next(g)[0:3]
                         if token in (')', ',') and level == 1:
@@ -290,7 +275,7 @@ def _create_tree(fullmodule, path, fname, source, tree, inpackage):
                 if stack:
                     cur_obj = stack[-1][0]
                     cur_class = _nest_class(
-                        cur_obj, class_name, lineno, inherit)
+                            cur_obj, class_name, lineno, inherit)
                 else:
                     cur_class = Class(fullmodule, class_name, inherit,
                                       fname, lineno)
@@ -396,7 +381,7 @@ def _main():
     else:
         path = []
     tree = readmodule_ex(mod, path)
-    def lineno_key(a): return getattr(a, 'lineno', 0)
+    lineno_key = lambda a: getattr(a, 'lineno', 0)
     objs = sorted(tree.values(), key=lineno_key, reverse=True)
     indent_level = 2
     while objs:
@@ -418,7 +403,6 @@ def _main():
                   .format(' ' * obj.indent, obj.name, obj.super, obj.lineno))
         elif isinstance(obj, Function):
             print("{}def {} {}".format(' ' * obj.indent, obj.name, obj.lineno))
-
 
 if __name__ == "__main__":
     _main()
