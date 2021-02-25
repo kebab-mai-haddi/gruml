@@ -51,6 +51,7 @@ class GRUML:
                         rel_dir, file) if rel_dir != '.' else file
                     module = module.split(".py")[0].replace('/', '.')
                     self.source_code_modules[module] = rel_dir if rel_dir != '.' else ''
+        sys.path.append(self.source_code_path[0])
 
     def get_driver_path_and_driver_name(self, use_case, driver_name, driver_path, driver_function):
         """ask for driver path and driver module's  name.
@@ -71,6 +72,8 @@ class GRUML:
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
         """
+        # sys.path.append('/tmp/pandas/pandas/doc/')
+        # sys.path.append('/tmp/pandas/pandas/doc/sphinxext')
         # _ = GenerateSequenceDiagram(self.source_code_path[0])
         agg_data = defaultdict(list)
         # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
@@ -81,20 +84,34 @@ class GRUML:
         for source_code_module in self.source_code_modules:
             source_code_path = [os.path.join(
                 self.source_code_path[0], self.source_code_modules[source_code_module])]
-            source_code_module = source_code_module.split('.')[-1]
-            logging.debug(
-                'Source code module: {}, Source code path: {}'.format(
+            only_module = source_code_module.split('.')[-1]
+            # only_module = None  # to be set only when we get a KeyError for directories without __init__
+            if only_module  in sys.modules:
+                pyclbr_module = only_module
+            else:
+                pyclbr_module = source_code_module
+            logging.debug("Source Code Module: {}, Source Code Path: {}".format(
+                pyclbr_module, source_code_path))
+            try:
+                source_code_data = pyclbr.readmodule_ex(
                     source_code_module, source_code_path)
-            )
-            source_code_data = pyclbr.readmodule_ex(
-                source_code_module, path=source_code_path)
+            except (KeyError, ModuleNotFoundError) as e:
+                logging.warning(e)
+                only_module = source_code_module.split('.')[-1]
+                source_code_data = pyclbr.readmodule_ex(
+                    only_module, source_code_path)
             for name, class_data in source_code_data.items():
                 if name == '__path__':
                     continue
-                # if class_data.module == 'pickle':
-                #     print('Caught an outsider')
                 if class_data.module not in self.source_code_modules:
-                    continue
+                    if only_module:
+                        class_data.module = source_code_module
+                        logging.debug(
+                            "Module: {} found but with complete package name({}) that received a KeyError.".format(class_data.module, source_code_module))
+                    else:
+                        logging.debug(
+                            "Module: {} not found in source code.".format(source_code_module))
+                        continue
                 self.class_object_mapping[class_data.module]['{}'.format(
                     class_data.name)] = class_data
         logging.debug(
@@ -104,19 +121,28 @@ class GRUML:
             counter = 0
             source_code_path = [os.path.join(
                 self.source_code_path[0], self.source_code_modules[source_code_module])]
-            source_code_module = source_code_module.split('.')[-1]
-            logging.debug(
-                'Source code module: {}, Source code path: {}'.format(
+            only_module = None  # to be set only when we get a KeyError for directories without __init__
+            logging.debug("Source Code Module: {}, Source Code Path: {}".format(
+                source_code_module, source_code_path))
+            try:
+                source_code_data = pyclbr.readmodule_ex(
                     source_code_module, source_code_path)
-            )
-            source_code_data = pyclbr.readmodule_ex(
-                source_code_module, path=source_code_path)
+            except KeyError:
+                logging.warning(
+                    "Faced KeyError, maybe due to directories without __init__.py file.")
+                only_module = source_code_module.split('.')[-1]
+                source_code_data = pyclbr.readmodule_ex(
+                    only_module, source_code_path)
+
             generate_hierarchy = GenerateHierarchy()
+
             for name, class_data in source_code_data.items():
                 # don't cover classes that are not in the source code modules
                 if name == '__path__':
                     continue
                 if class_data.module not in self.source_code_modules:
+                    logging.warning(
+                        "Found a non-covered module: {}".format(class_data.module))
                     continue
                 methods = []
                 parents = []
@@ -160,6 +186,7 @@ class GRUML:
         logging.debug(agg_data.get('pickle', 'Not in agg_data'))
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
+            # TODO: there should be a single source of truth for extracting modules rather than extracting them from file names. Multi-level hierarchy fucks this up.
             module = file_.replace(
                 '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
             if module not in self.source_code_modules:
@@ -175,10 +202,10 @@ class GRUML:
                         line_no = use_[2]
                         for class_ in files[j]:
                             logging.debug('Checking for class {} in file {} and _class is {}'.format(
-                                class_, files[j], _class))
+                                class_, j, _class))
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
-                                dependent_module = j.split(
-                                    '/')[-1].split('.py')[0]
+                                dependent_module = j.replace(
+                                    '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
                                 try:
                                     agg_data[module][class_index[module][_class]]['Dependents'].append(
                                         {'module': dependent_module, 'class': class_['class']})
