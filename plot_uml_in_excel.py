@@ -112,7 +112,7 @@ class WriteInExcel:
         logging.debug("All classes that are parents or dependees are: ")
         logging.debug(dependees_and_parents_combined)
         for module in dependees_and_parents_combined:
-            if not self.class_row_mapping.get(module, None):
+            if not self.class_row_mapping.get(module, []):
                 logging.warn(
                     "Out of scope module was brought up, no row maping found")
                 continue
@@ -130,6 +130,8 @@ class WriteInExcel:
                     df.iloc[self.class_row_mapping[module]
                             [class_][0]][skip_cols] = "⇒"
                     for dependent in dependee_to_dependents_mapping[module][class_]:
+                        logging.debug("Currently handling: ")
+                        logging.debug(dependent)
                         df.iloc[self.class_row_mapping[dependent['dependent_module']][dependent['dependent_class']]
                                 [0], column_counter] = "←"
                         self.dark_edges_column[column_counter].append(
