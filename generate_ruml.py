@@ -27,6 +27,7 @@ class GRUML:
 
     def __init__(self, test=False):
         self.source_code_path = []
+        # all the Python files in the source code to study.
         self.source_code_modules = {}
         self.driver_path = None
         self.driver_name = None
@@ -36,21 +37,37 @@ class GRUML:
         global foo
         self.foo = foo
         self.sys_path_folders = set()
+        self.source_code_files = list()
+
+    def _extract_rel_dir(self, dirpath):
+        rel_dir = os.path.relpath(dirpath, self.source_code_path[0])
+        return rel_dir if rel_dir != '.' else ''
+
+    def _extract_module_name(self, file_, dirpath=None):
+        if not dirpath:
+            dirpath = os.path.abspath(file_)
+        rel_dir = self._extract_rel_dir(dirpath)
+        module_file_rel_path = os.path.join(rel_dir, file_)
+        module = module_file_rel_path.split(".py")[0].replace('/', '.')
+        return module
 
     def get_source_code_path_and_modules(self, source_code_path):
-        """input source code that is to be studied and compute all
+        """input the source code to study and compute all
         modules inside it.
+
+        Args:
+            source_code_path (str): path of the source code
         """
         self.source_code_path = [source_code_path]
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             for file in filenames:
                 if file.endswith(".py"):
-                    rel_dir = os.path.relpath(
-                        dirpath, self.source_code_path[0])
-                    module = os.path.join(
-                        rel_dir, file) if rel_dir != '.' else file
-                    module = module.split(".py")[0].replace('/', '.')
-                    self.source_code_modules[module] = rel_dir if rel_dir != '.' else ''
+                    absolute_file_path = os.path.abspath(
+                        os.path.join(dirpath, file))
+                    self.source_code_files.append(absolute_file_path)
+                    module = self._extract_module_name(file, dirpath)
+                    rel_dir = self._extract_rel_dir(dirpath)
+                    self.source_code_modules[module] = rel_dir
         sys.path.append(self.source_code_path[0])
 
     def get_driver_path_and_driver_name(self, use_case, driver_name, driver_path, driver_function):
@@ -69,12 +86,34 @@ class GRUML:
         _ = GenerateSequenceDiagram(
             self.source_code_path[0], self.driver_path, self.driver_name)
 
+    def _test_check_all_modules_coverage(self, modules_covered_temp):
+        for source_code_file in self.source_code_files:
+            if source_code_file not in modules_covered_temp:
+                return False
+        return True
+
+    def _extract_module_name_for_pyclbr(self, source_code_module):
+        first_level_module_name = source_code_module.split('.')[-1]
+        if first_level_module_name in sys.modules:
+            return source_code_module
+        return first_level_module_name
+
+    def _extract_module_path_for_pyclbr(self, source_code_module):
+        return [os.path.join(self.source_code_path[0], self.source_code_modules[source_code_module])]
+
+    def _extract_source_code_data(self, source_code_module):
+        source_code_path = self._extract_module_path_for_pyclbr(
+            source_code_module)
+        module_name_for_pyclbr = self._extract_module_name_for_pyclbr(
+            source_code_module)
+        source_code_data = pyclbr.readmodule_ex(
+            module_name_for_pyclbr, source_code_path)
+        return source_code_data
+
     def generate_dependency_data(self):
         """generate dependency (inheritance and non-inheritance) data.
         """
-        # sys.path.append('/tmp/pandas/pandas/doc/')
-        # sys.path.append('/tmp/pandas/pandas/doc/sphinxext')
-        # _ = GenerateSequenceDiagram(self.source_code_path[0])
+        modules_covered_temp = set()
         agg_data = defaultdict(list)
         # dictionary to store all files: classes mapping. If a .py file has three classes, their name, start and end line will be stored here.
         files = {}
@@ -82,57 +121,21 @@ class GRUML:
         # to check if a class has already been covered due to some import in another file.
         self.classes_covered = defaultdict(lambda: defaultdict(int))
         for source_code_module in self.source_code_modules:
-            source_code_path = [os.path.join(
-                self.source_code_path[0], self.source_code_modules[source_code_module])]
-            only_module = source_code_module.split('.')[-1]
-            # only_module = None  # to be set only when we get a KeyError for directories without __init__
-            if only_module  in sys.modules:
-                pyclbr_module = only_module
-            else:
-                pyclbr_module = source_code_module
-            logging.debug("Source Code Module: {}, Source Code Path: {}".format(
-                pyclbr_module, source_code_path))
-            try:
-                source_code_data = pyclbr.readmodule_ex(
-                    source_code_module, source_code_path)
-            except (KeyError, ModuleNotFoundError) as e:
-                logging.warning(e)
-                only_module = source_code_module.split('.')[-1]
-                source_code_data = pyclbr.readmodule_ex(
-                    only_module, source_code_path)
+            source_code_data = self._extract_source_code_data(
+                source_code_module)
             for name, class_data in source_code_data.items():
                 if name == '__path__':
                     continue
                 if class_data.module not in self.source_code_modules:
-                    if only_module:
-                        class_data.module = source_code_module
-                        logging.debug(
-                            "Module: {} found but with complete package name({}) that received a KeyError.".format(class_data.module, source_code_module))
-                    else:
-                        logging.debug(
-                            "Module: {} not found in source code.".format(source_code_module))
-                        continue
+                    continue
                 self.class_object_mapping[class_data.module]['{}'.format(
                     class_data.name)] = class_data
-        logging.debug(
-            'Class: Object indexing created successfully!'
-        )
+                modules_covered_temp.add(class_data.file)
+        logging.debug('Class: Object indexing created successfully!')
         for source_code_module in self.source_code_modules:
             counter = 0
-            source_code_path = [os.path.join(
-                self.source_code_path[0], self.source_code_modules[source_code_module])]
-            only_module = None  # to be set only when we get a KeyError for directories without __init__
-            logging.debug("Source Code Module: {}, Source Code Path: {}".format(
-                source_code_module, source_code_path))
-            try:
-                source_code_data = pyclbr.readmodule_ex(
-                    source_code_module, source_code_path)
-            except KeyError:
-                logging.warning(
-                    "Faced KeyError, maybe due to directories without __init__.py file.")
-                only_module = source_code_module.split('.')[-1]
-                source_code_data = pyclbr.readmodule_ex(
-                    only_module, source_code_path)
+            source_code_data = self._extract_source_code_data(
+                source_code_module)
 
             generate_hierarchy = GenerateHierarchy()
 
