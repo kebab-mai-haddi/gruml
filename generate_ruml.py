@@ -25,8 +25,8 @@ logging.basicConfig(level=logging.ERROR)
 
 class GRUML:
 
-    def __init__(self, test=False):
-        self.source_code_path = []
+    def __init__(self, source_code_path, test=False):
+        self.source_code_path = [source_code_path]
         # all the Python files in the source code to study.
         self.source_code_modules = {}
         self.driver_path = None
@@ -38,6 +38,22 @@ class GRUML:
         self.foo = foo
         self.sys_path_folders = set()
         self.source_code_files = list()
+
+    def _packageize_directories(self):
+        package_file_name = '__init__.py'
+        unpackaged_directories = []
+        forbidden_package_directories = [self.source_code_path[0]]
+        # for forbidden_package_directory in ['.git', '__pycache__']:
+        #     forbidden_package_directories.append(os.path.join(
+        #         self.source_code_path[0], forbidden_package_directory))
+        for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
+            if dirpath not in forbidden_package_directories:
+                if package_file_name in filenames:
+                    continue
+                init_file_path = os.path.join(
+                    dirpath, package_file_name)
+                init_file = open(init_file_path, "w+")
+                init_file.close()
 
     def _extract_rel_dir(self, dirpath):
         rel_dir = os.path.relpath(dirpath, self.source_code_path[0])
@@ -51,14 +67,12 @@ class GRUML:
         module = module_file_rel_path.split(".py")[0].replace('/', '.')
         return module
 
-    def get_source_code_path_and_modules(self, source_code_path):
-        """input the source code to study and compute all
-        modules inside it.
+    def get_source_code_path_and_modules(self):
+        """Store all modues inside the source code direcory.
 
         Args:
             source_code_path (str): path of the source code
         """
-        self.source_code_path = [source_code_path]
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             for file in filenames:
                 if file.endswith(".py"):
@@ -68,6 +82,7 @@ class GRUML:
                     module = self._extract_module_name(file, dirpath)
                     rel_dir = self._extract_rel_dir(dirpath)
                     self.source_code_modules[module] = rel_dir
+        self._packageize_directories()
         sys.path.append(self.source_code_path[0])
 
     def get_driver_path_and_driver_name(self, use_case, driver_name, driver_path, driver_function):
@@ -92,22 +107,15 @@ class GRUML:
                 return False
         return True
 
-    def _extract_module_name_for_pyclbr(self, source_code_module):
-        first_level_module_name = source_code_module.split('.')[-1]
-        if first_level_module_name in sys.modules:
-            return source_code_module
-        return first_level_module_name
-
     def _extract_module_path_for_pyclbr(self, source_code_module):
         return [os.path.join(self.source_code_path[0], self.source_code_modules[source_code_module])]
 
     def _extract_source_code_data(self, source_code_module):
         source_code_path = self._extract_module_path_for_pyclbr(
             source_code_module)
-        module_name_for_pyclbr = self._extract_module_name_for_pyclbr(
-            source_code_module)
+        logging.debug(source_code_path)
         source_code_data = pyclbr.readmodule_ex(
-            module_name_for_pyclbr, source_code_path)
+            source_code_module, source_code_path)
         return source_code_data
 
     def generate_dependency_data(self):
@@ -121,6 +129,8 @@ class GRUML:
         # to check if a class has already been covered due to some import in another file.
         self.classes_covered = defaultdict(lambda: defaultdict(int))
         for source_code_module in self.source_code_modules:
+            logging.debug("Currently extracting the following module:")
+            logging.debug(source_code_module)
             source_code_data = self._extract_source_code_data(
                 source_code_module)
             for name, class_data in source_code_data.items():
@@ -327,9 +337,9 @@ class GRUML:
 def gruml(source_code_path, **kwargs):
     """driver function of GRUML.
     """
-    gruml = GRUML()
+    gruml = GRUML(source_code_path)
     print('Generating RUML for source code at: {}'.format(source_code_path))
-    gruml.get_source_code_path_and_modules(source_code_path)
+    gruml.get_source_code_path_and_modules()
     gruml.get_driver_path_and_driver_name(
         kwargs.get('use_case', None),
         kwargs.get('driver_name', None),
