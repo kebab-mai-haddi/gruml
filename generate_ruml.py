@@ -47,7 +47,8 @@ class GRUML:
         #     forbidden_package_directories.append(os.path.join(
         #         self.source_code_path[0], forbidden_package_directory))
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
-            if dirpath not in forbidden_package_directories:
+            # currently, only supporting properly named directories.
+            if dirpath not in forbidden_package_directories and '.' not in dirpath:
                 if package_file_name in filenames:
                     continue
                 init_file_path = os.path.join(
@@ -74,12 +75,17 @@ class GRUML:
             source_code_path (str): path of the source code
         """
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
+            if "." in dirpath:
+                continue
             for file in filenames:
                 if file.endswith(".py"):
+                    module = self._extract_module_name(file, dirpath)
+                    if "." in module:
+                        continue
                     absolute_file_path = os.path.abspath(
                         os.path.join(dirpath, file))
                     self.source_code_files.append(absolute_file_path)
-                    module = self._extract_module_name(file, dirpath)
+
                     rel_dir = self._extract_rel_dir(dirpath)
                     self.source_code_modules[module] = rel_dir
         self._packageize_directories()
@@ -111,11 +117,13 @@ class GRUML:
         return [os.path.join(self.source_code_path[0], self.source_code_modules[source_code_module])]
 
     def _extract_source_code_data(self, source_code_module):
-        source_code_path = self._extract_module_path_for_pyclbr(
-            source_code_module)
-        logging.debug(source_code_path)
+        # source_code_path = self._extract_module_path_for_pyclbr(
+        #     source_code_module)
+        # logging.debug(source_code_path)
+        if source_code_module == 'tensorflow.compat_template_v1.__init__':
+            logging.debug("Here.")
         source_code_data = pyclbr.readmodule_ex(
-            source_code_module, source_code_path)
+            source_code_module, self.source_code_path)
         return source_code_data
 
     def generate_dependency_data(self):
@@ -170,8 +178,6 @@ class GRUML:
                 if module in self.classes_covered:
                     if self.classes_covered[module].get(name):
                         continue
-                if module == 'pickle':
-                    print('here')
                 agg_data[module].append(
                     {
                         "Class": name,
@@ -360,10 +366,14 @@ def download_source_code(git_url):
         try:
             os.makedirs(directory_path)
         except OSError:
+            # logging.debug("Using the already cloned repo.")
+            # pass
             shutil.rmtree(directory_path)
             os.makedirs(directory_path)
         git_repo = git.Git(directory_path).clone(git_url)
-        print('Git repo is successfully downloaded: {}'.format(git_repo))
+        logging.debug(
+            'Git repo is successfully downloaded: {}'.format(git_repo))
+
     except Exception as e:
         raise ValueError(e)
     onlyfiles = [f for f in listdir(os.path.join(directory_path, root_dir))]
