@@ -48,7 +48,7 @@ class GRUML:
         #         self.source_code_path[0], forbidden_package_directory))
         for (dirpath, _, filenames) in os.walk(self.source_code_path[0]):
             # currently, only supporting properly named directories.
-            if dirpath not in forbidden_package_directories and '.' not in dirpath:
+            if dirpath not in forbidden_package_directories:
                 if package_file_name in filenames:
                     continue
                 init_file_path = os.path.join(
@@ -79,9 +79,9 @@ class GRUML:
                 continue
             for file in filenames:
                 if file.endswith(".py"):
-                    module = self._extract_module_name(file, dirpath)
-                    if "." in module:
+                    if "." in file.split('.py')[0]:
                         continue
+                    module = self._extract_module_name(file, dirpath)
                     absolute_file_path = os.path.abspath(
                         os.path.join(dirpath, file))
                     self.source_code_files.append(absolute_file_path)
@@ -206,8 +206,9 @@ class GRUML:
         # extract inter-file dependencies i.e. if a file's classes have been used in other files. Files being modules here.
         for file_ in files.keys():
             # TODO: there should be a single source of truth for extracting modules rather than extracting them from file names. Multi-level hierarchy fucks this up.
-            module = file_.replace(
-                '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
+            # module = file_.replace(
+            #     '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
+            module = self._extract_module_name(file_)
             if module not in self.source_code_modules:
                 continue
             for j in files.keys():
@@ -223,8 +224,7 @@ class GRUML:
                             logging.debug('Checking for class {} in file {} and _class is {}'.format(
                                 class_, j, _class))
                             if ((class_['start_line'] < line_no) and (class_['end_line'] > line_no)):
-                                dependent_module = j.replace(
-                                    '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
+                                dependent_module = self._extract_module_name(j)
                                 try:
                                     agg_data[module][class_index[module][_class]]['Dependents'].append(
                                         {'module': dependent_module, 'class': class_['class']})
@@ -257,9 +257,8 @@ class GRUML:
                     )
         # extract intra-file dependencies
         for file_ in files.keys():
-            module_name = file_.replace(
-                '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
-            if module not in self.source_code_modules:
+            module_name = self._extract_module_name(file_)
+            if module_name not in self.source_code_modules:
                 continue
             with open(file_) as f:
                 data = f.read()
