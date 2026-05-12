@@ -166,7 +166,8 @@ class GRUML:
                 continue
             for j in files.keys():
                 try:
-                    source = open(j).read()
+                    with open(j, encoding='utf-8', errors='replace') as f:
+                        source = f.read()
                     collector = ModuleUseCollector(module)
                     collector.visit(ast.parse(source))
                     for use_ in collector.used_at:
@@ -215,7 +216,7 @@ class GRUML:
                 '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
             if module_name not in self.source_code_modules:
                 continue
-            with open(file_) as f:
+            with open(file_, encoding='utf-8', errors='replace') as f:
                 data = f.read()
                 module = ast.parse(data)
                 classes = [obj for obj in module.body if isinstance(
