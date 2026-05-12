@@ -213,7 +213,7 @@ class GRUML:
         for file_ in files.keys():
             module_name = file_.replace(
                 '/', '.')[len(self.source_code_path[0])+1:].split('.py')[0]
-            if module not in self.source_code_modules:
+            if module_name not in self.source_code_modules:
                 continue
             with open(file_) as f:
                 data = f.read()
