@@ -4,6 +4,7 @@ import importlib
 import logging
 import os
 import pyclbr
+import re
 import shutil
 import sys
 from collections import defaultdict
@@ -19,6 +20,13 @@ from plot_uml_in_excel import WriteInExcel
 from utils_google_drive import upload_file_to_google_drive
 
 logging.basicConfig(level=logging.ERROR)
+
+# Whitelist of safe driver-function identifiers. The function name is fed to
+# importlib + getattr at runtime; the AttributeError path is already safe
+# against code injection (getattr does not parse its argument), but rejecting
+# anything that is not a plain Python identifier produces a clearer error and
+# guards future code that might interpret driver_function as a code blob.
+_SAFE_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class GRUML:
@@ -61,6 +69,11 @@ class GRUML:
         if not use_case:
             self.use_case = False
             return
+        if not _SAFE_IDENTIFIER.match(driver_function or ""):
+            raise ValueError(
+                "driver_function {!r} is not a valid Python identifier "
+                "(must match [A-Za-z_][A-Za-z0-9_]*)".format(driver_function)
+            )
         self.use_case = use_case
         self.driver_name = driver_name
         self.driver_path = os.path.join(self.source_code_path[0], driver_path)
