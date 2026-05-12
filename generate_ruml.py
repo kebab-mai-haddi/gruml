@@ -18,8 +18,6 @@ from generate_sequence_diagram import GenerateSequenceDiagram
 from plot_uml_in_excel import WriteInExcel
 from utils_google_drive import upload_file_to_google_drive
 
-foo = None
-
 logging.basicConfig(level=logging.ERROR)
 
 
@@ -33,8 +31,10 @@ class GRUML:
         self.test = test
         self.use_case = True
         self.class_object_mapping = defaultdict(dict)
-        global foo
-        self.foo = foo
+        # Dynamically-loaded driver module for use-case tracing; populated
+        # by generate_sequential_function_calls. Previously a module-level
+        # global named `foo` (see #48).
+        self.driver_module = None
         self.sys_path_folders = set()
 
     def get_source_code_path_and_modules(self, source_code_path):
@@ -267,12 +267,12 @@ class GRUML:
         #     self.driver_path, self.driver_name, self.source_code_path[0])
         spec = importlib.util.spec_from_file_location(
             self.driver_name, self.driver_path)
-        global foo
-        foo = self.foo
-        foo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(foo)
+        self.driver_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.driver_module)
         tracer = Trace(countfuncs=1, countcallers=1, timing=1)
-        tracer.run('foo.{}()'.format(self.driver_function))
+        # Use runfunc + getattr so the driver function name does not need
+        # to be string-interpolated into a code blob executed by Trace.run.
+        tracer.runfunc(getattr(self.driver_module, self.driver_function))
         results = tracer.results()
         caller_functions = results.callers
         function_sequence = []  # consists of all functions called in sequence
